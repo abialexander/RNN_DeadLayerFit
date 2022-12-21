@@ -1,0 +1,8 @@
+{
+    "accuracy_FCCD": 0.991,
+    "precision_FCCD": 0.9886135298057602,
+    "recall_FCCD": 0.9932705248990579,
+    "accuracy_DLF": 0.9636666666666667,
+    "precision_DLF": 0.9640239840106596,
+    "recall_DLF": 0.9633821571238349
+}
