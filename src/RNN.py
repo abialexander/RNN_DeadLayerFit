@@ -70,7 +70,7 @@ class FCNet(nn.Module):
     
 #The RNN based model:
 class RNN(nn.Module):
-    def __init__(self,histlen,num_class, get_attention = False):
+    def __init__(self,histlen,num_class, get_attention = False, attention_mechanism = "normal"):
         super(RNN, self).__init__()
         
         bidirec = True
@@ -86,6 +86,7 @@ class RNN(nn.Module):
         self.fcnet = FCNet(feed_in_dim,2) #only 2 classes/decisions to make: FCCD1>FCCD2 and DLF1>DLF2
         self.attention_weight = nn.Linear(feed_in_dim//2, feed_in_dim//2, bias=False)
         self.get_attention = get_attention
+        self.attention_mechanism = attention_mechanism #="normal" or " cosine"
 
 #   @torchsnooper.snoop() #uncomment for troubleshooting if training fails
     def forward(self, x):
@@ -100,19 +101,18 @@ class RNN(nn.Module):
         
         
         #Attention Mechanism
-        # output = output.permute(0,2,1) #[batch, seq_len, channel] -> [batch, channel, seq_len]
-        hidden_attention = hidden.unsqueeze(-1) #[batch, channel]
-        w_attention = self.attention_weight(output) # [batch, seq_len, channel] * [channel, channel] -> [batch, seq_len, channel]
-        w_attention = torch.einsum("ijl,ilm->ijm",w_attention,hidden_attention).squeeze(-1)   # [batch, seq_len, channel] * [batch, channel] -> [batch, seq_len]
-        attention_score = torch.softmax(w_attention,dim=-1) #Softmax over seq_len dimension
+        if self.attention_mechanism == "normal":
+            hidden_attention = hidden.unsqueeze(-1) #[batch, channel]
+            w_attention = self.attention_weight(output) # [batch, seq_len, channel] * [channel, channel] -> [batch, seq_len, channel]
+            w_attention = torch.einsum("ijl,ilm->ijm",w_attention,hidden_attention).squeeze(-1)   # [batch, seq_len, channel] * [batch, channel] -> [batch, seq_len]
+            attention_score = torch.softmax(w_attention,dim=-1) #Softmax over seq_len dimension
         
 #         #try other attention mechanism
-#         # Cosine Attention
-#         inner_product = torch.einsum("ijl,il->ij",output, hidden)
-#         output_norm = torch.linalg.norm(output,dim=-1)
-#         hidden_norm = torch.linalg.norm(hidden,dim=-1).unsqueeze(-1).expand(output_norm.size())
-#         attention_score = torch.softmax(inner_product/(output_norm*hidden_norm),dim=-1) #Softmax over seq_len dimension
-        
+        elif self.attention_mechanism == "cosine":
+            inner_product = torch.einsum("ijl,il->ij",output, hidden)
+            output_norm = torch.linalg.norm(output,dim=-1)
+            hidden_norm = torch.linalg.norm(hidden,dim=-1).unsqueeze(-1).expand(output_norm.size())
+            attention_score = torch.softmax(inner_product/(output_norm*hidden_norm),dim=-1) #Softmax over seq_len dimension
         
         if self.get_attention:
             return attention_score

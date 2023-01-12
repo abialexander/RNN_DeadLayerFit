@@ -91,12 +91,34 @@ def main():
 #     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID)
     
     
-    #=================TRAINING 5 (max FCCDdiff=0.1)===================
-    NUM_EPOCHS = 30 #can try increasing
+#     #=================TRAINING 5 (max FCCDdiff=0.1)===================
+#     NUM_EPOCHS = 30 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000
+   
+#     maxFCCDdiff = 0.1
+#     maxDLFdiff = 1.0 #i.e. no restriction
+#     RNN_ID ="RNN_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+#     #Load dataset
+#     BATCH_SIZE = 4 
+#     restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, restrict_dataset=True, restrict_dict = restrict_dict, size=dataset_size)
+    
+#     #train RNN
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID)
+    
+    
+        #=================TRAINING 6 (max FCCDdiff=0.05)===================
+    NUM_EPOCHS = 40 #can try increasing
     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
     dataset_size = 10000
    
-    maxFCCDdiff = 0.1
+    maxFCCDdiff = 0.05
     maxDLFdiff = 1.0 #i.e. no restriction
     RNN_ID ="RNN_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
 
@@ -111,6 +133,7 @@ def main():
     
     #train RNN
     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID)
+
 
 
 
