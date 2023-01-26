@@ -2,7 +2,13 @@
     "accuracy_FCCD": 0.9506666666666667,
     "precision_FCCD": 0.9627659574468085,
     "recall_FCCD": 0.9402597402597402,
+    "roc_auc_FCCD": 0.9913338373954812,
     "accuracy_DLF": 0.981,
     "precision_DLF": 0.9861294583883752,
-    "recall_DLF": 0.9764551994767822
+    "recall_DLF": 0.9764551994767822,
+    "decision_thresholds": [
+        0.5,
+        0.5
+    ],
+    "roc_auc_DLF": 0.9988337863174634
 }

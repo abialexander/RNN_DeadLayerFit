@@ -75,6 +75,7 @@ class RNN(nn.Module):
         
         bidirec = True
         self.bidirec = bidirec
+        self.num_class = num_class
         feed_in_dim = 512
         self.seg = 1
         self.seq_len = histlen // self.seg
@@ -83,7 +84,7 @@ class RNN(nn.Module):
             feed_in_dim *= 2
         else:
             self.RNNLayer = torch.nn.GRU(input_size = self.seg, hidden_size = feed_in_dim//2,num_layers=2, batch_first=True,bidirectional=False,dropout=0.2)
-        self.fcnet = FCNet(feed_in_dim,2) #only 2 classes/decisions to make: FCCD1>FCCD2 and DLF1>DLF2
+        self.fcnet = FCNet(feed_in_dim,self.num_class) #only 2 classes/decisions to make: FCCD1>FCCD2 and DLF1>DLF2
         self.attention_weight = nn.Linear(feed_in_dim//2, feed_in_dim//2, bias=False)
         self.get_attention = get_attention
         self.attention_mechanism = attention_mechanism #="normal" or " cosine"

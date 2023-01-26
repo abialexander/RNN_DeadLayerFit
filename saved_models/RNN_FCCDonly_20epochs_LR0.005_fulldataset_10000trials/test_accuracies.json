@@ -1,0 +1,10 @@
+{
+    "accuracy_FCCD": 0.9973333333333333,
+    "precision_FCCD": 0.9947089947089947,
+    "recall_FCCD": 1.0,
+    "roc_auc_FCCD": 0.9999995555523951,
+    "decision_thresholds": [
+        0.5,
+        0.5
+    ]
+}

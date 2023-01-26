@@ -38,7 +38,7 @@ from src.RNN import *
 from src.data import *
 
 
-def train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, fulldataset=True, saveRNN=False, plot_training_results = False, RNN_ID = None):
+def train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, fulldataset=True, saveRNN=False, plot_training_results = False, RNN_ID = None, attention_mechanism = "normal", FCCDonly = False):
     "function to create and train the RNN from a given dataset (test and train loader)"
     
     if RNN_ID is None and saveRNN==True:
@@ -53,7 +53,10 @@ def train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, ful
     BATCH_SIZE = train_loader.batch_size
     
     #Define RNN classifier
-    RNNclassifier = RNN(dataset.get_histlen(),2) #only 2 classes
+    if FCCDonly == True: #only 1 class/label, FCCD, fixed DLF=1
+        RNNclassifier = RNN(dataset.get_histlen(), 1, attention_mechanism=attention_mechanism) #only 1 class
+    else:
+        RNNclassifier = RNN(dataset.get_histlen(), 2, attention_mechanism=attention_mechanism) #only 2 classes
     RNNclassifier.to(DEVICE)
 
     print("#params", sum(x.numel() for x in RNNclassifier.parameters()))
@@ -88,12 +91,16 @@ def train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, ful
             spectrum_diff = spectrum_diff.to(DEVICE).float()
             FCCDLabel = FCCDLabel.to(DEVICE).float() #(batch_size,)
             DLFLabel = DLFLabel.to(DEVICE).float() #(batch_size,)
-            concat_labels = torch.stack([FCCDLabel, DLFLabel], dim=1) # (batch_size, 2)
 
             #Train RNN Classifier
-            RNNoutputs  = RNNclassifier(spectrum_diff) #(batch_size, 2) 
+            RNNoutputs  = RNNclassifier(spectrum_diff) #(batch_size, num_class) 
 
             #Calculate Loss
+            if FCCDonly == True:
+                concat_labels = torch.stack([FCCDLabel], dim=1)
+            else:
+                concat_labels = torch.stack([FCCDLabel, DLFLabel], dim=1) # (batch_size, num_class)
+
             RNNloss = RNNcriterion(RNNoutputs, concat_labels)
 
             #Back-propagate Loss
@@ -120,7 +127,11 @@ def train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, ful
 
 
         # Plots per epoch
-        fig, (ax_FCCD, ax_DLF) = plt.subplots(1, 2, figsize=(12,4))
+        if FCCDonly == True:
+            fig, ax_FCCD = plt.subplots()
+        else:
+            fig, (ax_FCCD, ax_DLF) = plt.subplots(1, 2, figsize=(12,4))
+        
         FCCD_labels_all = []
         FCCD_RNNoutputs_all = []
         FCCD_RNNoutputs_1 = [] #outputs where input label is 1
@@ -136,7 +147,10 @@ def train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, ful
         for spectrum_diff, FCCDLabel, DLFLabel, extras, spectrum in tqdm(test_loader): 
 
             RNNclassifier.eval()
-            labels = torch.stack([FCCDLabel, DLFLabel], dim=1) # (batch_size, 2)
+            if FCCDonly == True:
+                labels = torch.stack([FCCDLabel], dim=1) # (batch_size, 1)
+            else:
+                labels = torch.stack([FCCDLabel, DLFLabel], dim=1) # (batch_size, 2)
             lb_data_in = labels.cpu().data.numpy()
 
             with torch.no_grad():
@@ -149,25 +163,29 @@ def train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, ful
                     FCCD_label = FCCDLabel[i].item()
                     DLF_label = DLFLabel[i].item()
 
-                    RNNoutput_FCCD = outputs[i][0]
-                    RNNoutput_DLF = outputs[i][1]
+                    if FCCDonly == True:
+                        RNNoutput_FCCD = outputs[i][0]
+                    else:
+                        RNNoutput_FCCD = outputs[i][0]
+                        RNNoutput_DLF = outputs[i][1]
 
 
                     FCCD_labels_all.append(FCCD_label)
                     FCCD_RNNoutputs_all.append(RNNoutput_FCCD)
 
-                    DLF_labels_all.append(DLF_label)
-                    DLF_RNNoutputs_all.append(RNNoutput_DLF)
-
                     if FCCD_label == 1:
                         FCCD_RNNoutputs_1.append(RNNoutput_FCCD)
                     else:
                         FCCD_RNNoutputs_0.append(RNNoutput_FCCD)
+                    
+                    if FCCDonly == False:
+                        DLF_labels_all.append(DLF_label)
+                        DLF_RNNoutputs_all.append(RNNoutput_DLF)
 
-                    if DLF_label == 1:
-                        DLF_RNNoutputs_1.append(RNNoutput_DLF)
-                    else:
-                        DLF_RNNoutputs_0.append(RNNoutput_DLF)
+                        if DLF_label == 1:
+                            DLF_RNNoutputs_1.append(RNNoutput_DLF)
+                        else:
+                            DLF_RNNoutputs_0.append(RNNoutput_DLF)
 
 
         bins = np.linspace(0,1,201)  
@@ -177,21 +195,23 @@ def train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, ful
         ax_FCCD.set_xlabel("FCCD RNNoutput")
         ax_FCCD.set_yscale("log")
 
-        ax_DLF.hist(np.array(DLF_RNNoutputs_1), bins=bins, label = "label = 1", histtype="step")
-        ax_DLF.hist(np.array(DLF_RNNoutputs_0), bins=bins, label = "label = 0", histtype="step")
-        ax_DLF.legend()
-        ax_DLF.set_xlabel("DLF RNNoutput")
-        ax_DLF.set_yscale("log")
-
+        if FCCDonly == False:
+            ax_DLF.hist(np.array(DLF_RNNoutputs_1), bins=bins, label = "label = 1", histtype="step")
+            ax_DLF.hist(np.array(DLF_RNNoutputs_0), bins=bins, label = "label = 0", histtype="step")
+            ax_DLF.legend()
+            ax_DLF.set_xlabel("DLF RNNoutput")
+            ax_DLF.set_yscale("log")
+            
 #         plt.show()
 
         #Print accuracy after each epoch with a default boundary at 0.5
         accuracy_FCCD, precision_FCCD, recall_FCCD = compute_accuracy(0.5, FCCD_labels_all, FCCD_RNNoutputs_all)
         FCCD_accuracy_values.append(accuracy_FCCD)
         print("accuracy_FCCD: ", accuracy_FCCD)
-        accuracy_DLF, precision_DLF, recall_DLF = compute_accuracy(0.5, DLF_labels_all, DLF_RNNoutputs_all)
-        DLF_accuracy_values.append(accuracy_DLF)
-        print("accuracy_DLF: ", accuracy_DLF)
+        if FCCDonly == False:
+            accuracy_DLF, precision_DLF, recall_DLF = compute_accuracy(0.5, DLF_labels_all, DLF_RNNoutputs_all)
+            DLF_accuracy_values.append(accuracy_DLF)
+            print("accuracy_DLF: ", accuracy_DLF)
     
     print("")
     print("Training complete.")
@@ -203,10 +223,15 @@ def train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, ful
         print("Saving RNN at "+model_path)
         
     if plot_training_results == True:
-        training_results(NUM_EPOCHS, loss_values, FCCD_accuracy_values, DLF_accuracy_values, save_plots = True, RNN_ID = RNN_ID)
+        if FCCDonly == True:
+            training_results(NUM_EPOCHS, loss_values, FCCD_accuracy_values, None , save_plots = True, RNN_ID = RNN_ID)
+        else:
+            training_results(NUM_EPOCHS, loss_values, FCCD_accuracy_values, DLF_accuracy_values, save_plots = True, RNN_ID = RNN_ID)
     
-
-    return FCCD_accuracy_values, DLF_accuracy_values, loss_values
+    if FCCDonly == True:
+        return FCCD_accuracy_values, loss_values
+    else:
+        return FCCD_accuracy_values, DLF_accuracy_values, loss_values
 
 
 def training_results(NUM_EPOCHS, loss_values, FCCD_accuracy_values, DLF_accuracy_values, save_plots = False, RNN_ID = None):
@@ -226,7 +251,8 @@ def training_results(NUM_EPOCHS, loss_values, FCCD_accuracy_values, DLF_accuracy
     # accuracy plot
     plt.figure()
     plt.plot(np.arange(NUM_EPOCHS).astype(int), FCCD_accuracy_values, label = "FCCD")
-    plt.plot(np.arange(NUM_EPOCHS).astype(int), DLF_accuracy_values, label = "DLF")
+    if DLF_accuracy_values is not None:
+        plt.plot(np.arange(NUM_EPOCHS).astype(int), DLF_accuracy_values, label = "DLF")
     plt.xlabel("Epochs")
     plt.ylabel("Accuracy")
     plt.legend()
@@ -273,23 +299,21 @@ def compute_accuracy(cut,labels,outputs, print_results = False):
     return accuracy, precision, recall
 
 
-
-# THIS FUNCTION IS NOT CURRENTLY USED
-#This function gets the false positive rate, true positive rate, cutting threshold and area under curve using the given signal and background array
-def get_roc(sig, bkg):
-    testY = np.array([1]*len(sig) + [0]*len(bkg))
-    predY = np.array(sig+bkg)
-    auc = roc_auc_score(testY, predY)
-    fpr, tpr, thr = roc_curve(testY, predY)
+def get_roc(y_true, y_pred):
+    "function gets the false positive rate, true positive rate, cutting threshold and area under curve using the given y true and y predicted"
+    from sklearn.metrics import roc_curve, roc_auc_score
+    auc = roc_auc_score(y_true, y_pred)
+    fpr, tpr, thr = roc_curve(y_true, y_pred)
     return fpr,tpr,thr,auc
 
 
-def test_RNN(RNNclassifier, test_loader, RNN_ID=None, performance_plots = False, misclassified_trials_plots = False, save_results = False, train_restricted_test_fulldataset = False):
+def test_RNN(RNNclassifier, test_loader, RNN_ID=None, misclassified_trials_plots = False, save_results = False, train_restricted_test_fulldataset = False, attention_mechanism = "normal", FCCDonly = False, roc_curve = False, decision_thresholds=[0.5,0.5]):
     "function to test a trained RNN on given test dataset"
     
     if RNN_ID is None and save_results==True:
         print("You must set RNN_ID to save results!")
         return 0
+    
     
     DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     CodePath = os.path.dirname(os.path.abspath("__file__"))
@@ -309,8 +333,9 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, performance_plots = False,
     DLF_RNNoutputs_1 = [] #outputs where input label is 1
     DLF_RNNoutputs_0 = [] #outputs where input label is 0
 
-    FCCD_RNNoutput_cut = 0.5
-    DLF_RNNoutput_cut = 0.5
+    FCCD_RNNoutput_cut = decision_thresholds[0] #default = 0.5
+    DLF_RNNoutput_cut =  decision_thresholds[1] #default = 0.5
+    print("Selected decision thresholds: FCCD = ", FCCD_RNNoutput_cut, ", DLF = ", DLF_RNNoutput_cut)
 
     #misclassified trials
     FCCD_misclassified_FCCD_diff = []
@@ -326,7 +351,10 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, performance_plots = False,
     # Run test data set through trained RNN
     for j, (spectrum_diff, FCCDLabel, DLFLabel, extras, spectrum) in enumerate(tqdm(test_loader)): 
 
-        labels = torch.stack([FCCDLabel, DLFLabel], dim=1) # (batch_size, 2)!
+        if FCCDonly == True:
+            labels = torch.stack([FCCDLabel], dim=1) # (batch_size, 1)!
+        else:
+            labels = torch.stack([FCCDLabel, DLFLabel], dim=1) # (batch_size, 2)!
         lb_data_in = labels.cpu().data.numpy()
 
         with torch.no_grad():
@@ -339,30 +367,34 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, performance_plots = False,
                 FCCD_label = FCCDLabel[i].item()
                 DLF_label = DLFLabel[i].item()
 
-                RNNoutput_FCCD = outputs[i][0]
-                RNNoutput_DLF = outputs[i][1]
+                if FCCDonly == True:
+                    RNNoutput_FCCD = outputs[i][0]
+                else:
+                    RNNoutput_FCCD = outputs[i][0]
+                    RNNoutput_DLF = outputs[i][1]
 
                 FCCD_labels_all.append(FCCD_label)
                 FCCD_RNNoutputs_all.append(RNNoutput_FCCD)
-
-                DLF_labels_all.append(DLF_label)
-                DLF_RNNoutputs_all.append(RNNoutput_DLF)
 
                 if FCCD_label == 1:
                     FCCD_RNNoutputs_1.append(RNNoutput_FCCD)
                 else:
                     FCCD_RNNoutputs_0.append(RNNoutput_FCCD)
+                
+                if FCCDonly == False:
+                    
+                    DLF_labels_all.append(DLF_label)
+                    DLF_RNNoutputs_all.append(RNNoutput_DLF)
+             
+                    if DLF_label == 1:
+                        DLF_RNNoutputs_1.append(RNNoutput_DLF)
+                    else:
+                        DLF_RNNoutputs_0.append(RNNoutput_DLF)
 
-                if DLF_label == 1:
-                    DLF_RNNoutputs_1.append(RNNoutput_DLF)
-                else:
-                    DLF_RNNoutputs_0.append(RNNoutput_DLF)
 
-
-                #misclassified trials
+                #misclassified trials               
                 FCCD_pred = 1 if RNNoutput_FCCD > FCCD_RNNoutput_cut else 0
-                DLF_pred = 1 if RNNoutput_DLF > DLF_RNNoutput_cut else 0
-                FCCDmisclassified, DLFmisclassified = False, False
+                FCCDmisclassified = False
                 if FCCD_pred != FCCD_label:
                     FCCDmisclassified = True
                     FCCD_diff, FCCD1, FCCD2 = extras["FCCD_diff"][i].item(), extras["FCCD1"][i].item(), extras["FCCD2"][i].item()
@@ -370,19 +402,23 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, performance_plots = False,
                     FCCD_misclassified_FCCD1.append(FCCD1)
                     FCCD_misclassified_FCCD2.append(FCCD2)
                     FCCD_misclassified_FCCD_RNNoutput.append(RNNoutput_FCCD)
-                if DLF_pred != DLF_label:
-                    DLFmisclassified = True
-                    DLF_diff, DLF1, DLF2 = extras["DLF_diff"][i].item(), extras["DLF1"][i].item(), extras["DLF2"][i].item()
-                    DLF_misclassified_DLF_diff.append(DLF_diff)
-                    DLF_misclassified_DLF1.append(DLF1)
-                    DLF_misclassified_DLF2.append(DLF2)
-                    DLF_misclassified_DLF_RNNoutput.append(RNNoutput_DLF)
+                
+                if FCCDonly == False:
+                    DLF_pred = 1 if RNNoutput_DLF > DLF_RNNoutput_cut else 0
+                    DLFmisclassified = False
+                    if DLF_pred != DLF_label:
+                        DLFmisclassified = True
+                        DLF_diff, DLF1, DLF2 = extras["DLF_diff"][i].item(), extras["DLF1"][i].item(), extras["DLF2"][i].item()
+                        DLF_misclassified_DLF_diff.append(DLF_diff)
+                        DLF_misclassified_DLF1.append(DLF1)
+                        DLF_misclassified_DLF2.append(DLF2)
+                        DLF_misclassified_DLF_RNNoutput.append(RNNoutput_DLF)
 
-                if FCCDmisclassified is True and DLFmisclassified is True:
-                    print("DLF and FCCD misclassified for same trial:")
-                    print("j: ", j, ", i: ", i)
-                    print("FCCD1: ", FCCD1, ", FCCD2: ", FCCD2, ", FCCD_diff: ", FCCD_diff, ", RNNoutput: ", RNNoutput_FCCD)
-                    print("DLF1: ", DLF1, ", DLF2: ", DLF2, ", DLF_diff: ", DLF_diff, ", RNNoutput: ", RNNoutput_DLF)
+                    if FCCDmisclassified is True and DLFmisclassified is True:
+                        print("DLF and FCCD misclassified for same trial:")
+                        print("j: ", j, ", i: ", i)
+                        print("FCCD1: ", FCCD1, ", FCCD2: ", FCCD2, ", FCCD_diff: ", FCCD_diff, ", RNNoutput: ", RNNoutput_FCCD)
+                        print("DLF1: ", DLF1, ", DLF2: ", DLF2, ", DLF_diff: ", DLF_diff, ", RNNoutput: ", RNNoutput_DLF)
 
 
     #Compute accuracy
@@ -391,13 +427,95 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, performance_plots = False,
     print("accuracy: ", accuracy_FCCD)
     print("precision: ", precision_FCCD)
     print("recall: ", recall_FCCD)
-    print("")
-    print("DLF accuracies: ")
-    accuracy_DLF, precision_DLF, recall_DLF = compute_accuracy(DLF_RNNoutput_cut, DLF_labels_all, DLF_RNNoutputs_all, print_results=True)
-    print("accuracy: ", accuracy_DLF)
-    print("precision: ", precision_DLF)
-    print("recall: ", recall_DLF)
-    accuracies = {"accuracy_FCCD":accuracy_FCCD, "precision_FCCD":precision_FCCD, "recall_FCCD":recall_FCCD, "accuracy_DLF":accuracy_DLF, "precision_DLF":precision_DLF, "recall_DLF":recall_DLF}
+    
+    if FCCDonly == False:
+        print("")
+        print("DLF accuracies: ")
+        accuracy_DLF, precision_DLF, recall_DLF = compute_accuracy(DLF_RNNoutput_cut, DLF_labels_all, DLF_RNNoutputs_all, print_results=True)
+        print("accuracy: ", accuracy_DLF)
+        print("precision: ", precision_DLF)
+        print("recall: ", recall_DLF)
+    
+    if FCCDonly == False:
+        accuracies = {"accuracy_FCCD":accuracy_FCCD, "precision_FCCD":precision_FCCD, "recall_FCCD":recall_FCCD, "accuracy_DLF":accuracy_DLF, "precision_DLF":precision_DLF, "recall_DLF":recall_DLF, "decision_thresholds":decision_thresholds}
+    else:
+        accuracies = {"accuracy_FCCD":accuracy_FCCD, "precision_FCCD":precision_FCCD, "recall_FCCD":recall_FCCD, "decision_thresholds":decision_thresholds}
+    
+    # Performance Plots
+    if FCCDonly == True:
+        fig, ax_FCCD = plt.subplots()
+    else:
+        fig, (ax_FCCD, ax_DLF) = plt.subplots(1, 2, figsize=(12,4))
+    bins = np.linspace(0,1,201)  
+    counts, bins, bars = ax_FCCD.hist(np.array(FCCD_RNNoutputs_1), bins=bins, label = "label = 1", histtype="step")
+    ax_FCCD.hist(np.array(FCCD_RNNoutputs_0), bins=bins, label = "label = 0", histtype="step")
+    ax_FCCD.legend()
+    ax_FCCD.set_xlabel("FCCD RNNoutput")
+    ax_FCCD.vlines(FCCD_RNNoutput_cut, min(counts), 2*max(counts), linestyles="dashed", color="gray", label ="cut")
+    ax_FCCD.set_yscale("log")
+
+    if FCCDonly == False:
+        ax_DLF.hist(np.array(DLF_RNNoutputs_1), bins=bins, label = "label = 1", histtype="step")
+        counts, bins, bars = ax_DLF.hist(np.array(DLF_RNNoutputs_0), bins=bins, label = "label = 0", histtype="step")
+        ax_DLF.legend()
+        ax_DLF.set_xlabel("DLF RNNoutput")
+        ax_DLF.vlines(DLF_RNNoutput_cut, min(counts), 2*max(counts), linestyles="dashed", color="gray", label ="cut")
+        ax_DLF.set_yscale("log")
+
+    if save_results == True:
+        if train_restricted_test_fulldataset == True:
+            fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_RNN_performance_fulldataset.png"
+        else:
+            fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_RNN_performance.png"
+        plt.savefig(fn)
+    
+    
+    if roc_curve == True:
+      
+        print("")
+        fpr_FCCD,tpr_FCCD,thr_FCCD, roc_auc_FCCD = get_roc(FCCD_labels_all, FCCD_RNNoutputs_all)
+        print("roc auc FCCD: ", roc_auc_FCCD)
+        if FCCDonly == False:
+            fpr_DLF,tpr_DLF,thr_DLF, roc_auc_DLF = get_roc(DLF_labels_all, DLF_RNNoutputs_all)     
+            print("roc auc DLF: ", roc_auc_DLF)
+        
+        #Plot ROC
+        if FCCDonly == True:
+            fig, ax_FCCD = plt.subplots()
+        else: 
+            fig, (ax_FCCD, ax_DLF) = plt.subplots(1, 2, figsize=(9,4))
+            
+        ax_FCCD.scatter(fpr_FCCD, tpr_FCCD, label = "RNN Classifier", s=2)
+        ax_FCCD.axline((0, 0), slope=1, color='grey', linestyle="dashed", label="Random Classifier")
+        ax_FCCD.set_ylabel("TPR")
+        ax_FCCD.set_xlabel("FPR")
+        ax_FCCD.set_title("FCCD")
+        ax_FCCD.legend()
+        ax_FCCD.text(0.75, 0.35, 'AUC: %.3f'%roc_auc_FCCD, transform=ax_FCCD.transAxes, fontsize=10,verticalalignment='top')
+        
+        if FCCDonly == False:
+            ax_DLF.scatter(fpr_DLF, tpr_DLF, label = "RNN Classifier", s=2,  color="orange")
+            ax_DLF.axline((0, 0), slope=1, color='grey', linestyle="dashed", label="Random Classifier")
+            ax_DLF.set_ylabel("TPR")
+            ax_DLF.set_xlabel("FPR")
+            ax_DLF.set_title("DLF")
+            ax_DLF.legend()
+            ax_DLF.text(0.75, 0.35, 'AUC: %.3f'%roc_auc_DLF , transform=ax_DLF.transAxes, fontsize=10,verticalalignment='top')
+
+        plt.tight_layout()
+        if save_results == True:
+            if train_restricted_test_fulldataset == True:
+                fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_roc_fulldataset.png"
+            else:
+                fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_roc.png"
+            plt.savefig(fn)
+        
+        if FCCDonly == True:
+            accuracies = {"accuracy_FCCD":accuracy_FCCD, "precision_FCCD":precision_FCCD, "recall_FCCD":recall_FCCD, "roc_auc_FCCD": roc_auc_FCCD, "decision_thresholds":decision_thresholds}
+        else:
+            accuracies = {"accuracy_FCCD":accuracy_FCCD, "precision_FCCD":precision_FCCD, "recall_FCCD":recall_FCCD, "roc_auc_FCCD": roc_auc_FCCD, "accuracy_DLF":accuracy_DLF, "precision_DLF":precision_DLF, "recall_DLF":recall_DLF, "decision_thresholds":decision_thresholds, "roc_auc_DLF": roc_auc_DLF}
+    
+    
     if save_results == True:
         if train_restricted_test_fulldataset == True:
             fn = CodePath+"/saved_models/"+RNN_ID+"/test_accuracies_fulldataset.json"
@@ -405,40 +523,14 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, performance_plots = False,
             fn = CodePath+"/saved_models/"+RNN_ID+"/test_accuracies.json"
         with open(fn, "w") as outfile:
             json.dump(accuracies, outfile, indent=4)
-    
-    # Performance Plots
-    if performance_plots == True:
-        fig, (ax_FCCD, ax_DLF) = plt.subplots(1, 2, figsize=(12,4))
-        bins = np.linspace(0,1,201)  
-        counts, bins, bars = ax_FCCD.hist(np.array(FCCD_RNNoutputs_1), bins=bins, label = "label = 1", histtype="step")
-        ax_FCCD.hist(np.array(FCCD_RNNoutputs_0), bins=bins, label = "label = 0", histtype="step")
-        ax_FCCD.legend()
-        ax_FCCD.set_xlabel("FCCD RNNoutput")
-        ax_FCCD.vlines(FCCD_RNNoutput_cut, min(counts), 2*max(counts), linestyles="dashed", color="gray", label ="cut")
-        ax_FCCD.set_yscale("log")
-
-        ax_DLF.hist(np.array(DLF_RNNoutputs_1), bins=bins, label = "label = 1", histtype="step")
-        counts, bins, bars = ax_DLF.hist(np.array(DLF_RNNoutputs_0), bins=bins, label = "label = 0", histtype="step")
-        ax_DLF.legend()
-        ax_DLF.set_xlabel("DLF RNNoutput")
-        ax_DLF.vlines(DLF_RNNoutput_cut, min(counts), 2*max(counts), linestyles="dashed", color="gray", label ="cut")
-        ax_DLF.set_yscale("log")
-        
-        if save_results == True:
-            if train_restricted_test_fulldataset == True:
-                fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_RNN_performance_fulldataset.png"
-            else:
-                fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_RNN_performance.png"
-            plt.savefig(fn)
-
-#         plt.show()
+  
     
     if misclassified_trials_plots == True:
 
-        print("Total # misclassified trials FCCD: ", len(FCCD_misclassified_FCCD1), " /", len(FCCD_labels_all))
-        print("Total # misclassified trials DLF: ", len(DLF_misclassified_DLF1), " /", len(FCCD_labels_all))
+        print("")    
 
         #FCCD
+        print("Total # misclassified trials FCCD: ", len(FCCD_misclassified_FCCD1), " /", len(FCCD_labels_all))
         fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(12,4))
         fig.suptitle("Misclassified trials: FCCD", fontsize=12)
         bins = 20
@@ -465,34 +557,40 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, performance_plots = False,
             plt.savefig(fn)
 
         #DLF
-        fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(12,4))
-        fig.suptitle("Misclassified trials: DLF", fontsize=12)
-        bins = 20
-        ax1.hist(np.array(DLF_misclassified_DLF_diff), bins=bins, label = "DLF_diff", histtype="step", color="orange")
-        ax1.set_xlabel("DLF diff")
-        ax1.set_xlim(-1,1)
-        ax2.hist(np.array(DLF_misclassified_DLF1), bins=bins, label = "DLF1", histtype="step", color="orange")
-        ax2.set_xlabel("DLF 1")
-        ax2.set_xlim(0,1)
-        ax3.hist(np.array(DLF_misclassified_DLF2), bins=bins, label = "DLF2", histtype="step", color="orange")
-        ax3.set_xlabel("DLF 2")
-        ax3.set_xlim(0,1)
-        ax4.hist(np.array(DLF_misclassified_DLF_RNNoutput), bins=bins, label = "RNNoutput", histtype="step", color="orange")
-        ax4.set_xlabel("RNNoutput")
-        ax4.set_xlim(0,1)
-        ax1.text(0.05, 0.95, 'total: '+str(len(DLF_misclassified_DLF1)), transform=ax1.transAxes, fontsize=10,verticalalignment='top')
-        ax1.set_ylabel("Frequency")
-        if save_results == True:
-            if train_restricted_test_fulldataset == True:
-                fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_misclassified_hist_DLF_fulldataset.png"
-            else:
-                fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_misclassified_hist_DLF.png"
-            plt.savefig(fn)
+        if FCCDonly == False:
+            print("Total # misclassified trials DLF: ", len(DLF_misclassified_DLF1), " /", len(FCCD_labels_all))
+            fig, (ax1, ax2, ax3, ax4) = plt.subplots(1, 4, figsize=(12,4))
+            fig.suptitle("Misclassified trials: DLF", fontsize=12)
+            bins = 20
+            ax1.hist(np.array(DLF_misclassified_DLF_diff), bins=bins, label = "DLF_diff", histtype="step", color="orange")
+            ax1.set_xlabel("DLF diff")
+            ax1.set_xlim(-1,1)
+            ax2.hist(np.array(DLF_misclassified_DLF1), bins=bins, label = "DLF1", histtype="step", color="orange")
+            ax2.set_xlabel("DLF 1")
+            ax2.set_xlim(0,1)
+            ax3.hist(np.array(DLF_misclassified_DLF2), bins=bins, label = "DLF2", histtype="step", color="orange")
+            ax3.set_xlabel("DLF 2")
+            ax3.set_xlim(0,1)
+            ax4.hist(np.array(DLF_misclassified_DLF_RNNoutput), bins=bins, label = "RNNoutput", histtype="step", color="orange")
+            ax4.set_xlabel("RNNoutput")
+            ax4.set_xlim(0,1)
+            ax1.text(0.05, 0.95, 'total: '+str(len(DLF_misclassified_DLF1)), transform=ax1.transAxes, fontsize=10,verticalalignment='top')
+            ax1.set_ylabel("Frequency")
+            if save_results == True:
+                if train_restricted_test_fulldataset == True:
+                    fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_misclassified_hist_DLF_fulldataset.png"
+                else:
+                    fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_misclassified_hist_DLF.png"
+                plt.savefig(fn)
         
         
         #FCCD and DLF
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,5))
+        if FCCDonly == True:
+            fig, ax1 = plt.subplots()
+        else:
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,5))
         fig.suptitle("Misclassified trials", fontsize=12)
+        
         ax1.scatter(FCCD_misclassified_FCCD1, FCCD_misclassified_FCCD2, label="trials")
         ax1.set_xlabel("FCCD 1 / mm")
         ax1.set_ylabel("FCCD 2 / mm")
@@ -501,14 +599,17 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, performance_plots = False,
         ax1.axline((0, 0), slope=1, color='grey', linestyle="dashed", label="y=x line")
         ax1.text(0.05, 0.95, 'total: '+str(len(FCCD_misclassified_FCCD1)), transform=ax1.transAxes, fontsize=10,verticalalignment='top')
         ax1.legend(loc="lower right")
-        ax2.scatter(DLF_misclassified_DLF1, DLF_misclassified_DLF2, color="orange", label="trials")
-        ax2.set_xlabel("DLF 1")
-        ax2.set_ylabel("DLF 2")
-        ax2.set_xlim(0,1)
-        ax2.set_ylim(0,1)
-        ax2.axline((0, 0), slope=1, color='grey', linestyle="dashed", label="y=x line")
-        ax2.text(0.05, 0.95, 'total: '+str(len(DLF_misclassified_DLF1)), transform=ax2.transAxes, fontsize=10,verticalalignment='top')
-        ax2.legend(loc="lower right")
+        
+        if FCCDonly == False:
+            ax2.scatter(DLF_misclassified_DLF1, DLF_misclassified_DLF2, color="orange", label="trials")
+            ax2.set_xlabel("DLF 1")
+            ax2.set_ylabel("DLF 2")
+            ax2.set_xlim(0,1)
+            ax2.set_ylim(0,1)
+            ax2.axline((0, 0), slope=1, color='grey', linestyle="dashed", label="y=x line")
+            ax2.text(0.05, 0.95, 'total: '+str(len(DLF_misclassified_DLF1)), transform=ax2.transAxes, fontsize=10,verticalalignment='top')
+            ax2.legend(loc="lower right")
+            
         if save_results == True:
             if train_restricted_test_fulldataset == True:
                 fn=CodePath+"/saved_models/"+RNN_ID+"/plots/test_misclassified_scatter_fulldataset.png"
@@ -559,6 +660,120 @@ def plot_attention(spectrum, attscore, labels, ax= None, fig=None):
     plt.text(0, 0.98, info_str, transform=ax.transAxes, fontsize=10 ,verticalalignment='center') 
     
     return fig
+
+
+def plot_multiple_attention(dataset, test_loader, RNN_path, attention_mechanism="normal", RNN_ID=None, save_plots = False, train_restricted_test_fulldataset = False, FCCDonly = False):
+    "Function to plot the attention score of 20 random test events and save to a pdf"
+    
+    if RNN_ID is None and save_plots==True:
+        print("You must set RNN_ID to save results!")
+        return 0
+    
+    DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    CodePath = os.path.dirname(os.path.abspath("__file__"))
+    BATCH_SIZE = test_loader.batch_size
+    
+    #Make RNNinterpretor object and set get_attention to true
+    if FCCDonly == True:
+        RNNinterpretor = RNN(dataset.get_histlen(),1, get_attention = True, attention_mechanism=attention_mechanism)
+    else:
+        RNNinterpretor = RNN(dataset.get_histlen(),2, get_attention = True, attention_mechanism=attention_mechanism)
+
+    #Load trained RNN dict to this
+    RNNinterpretor.load_state_dict(torch.load(RNN_path))
+    RNNinterpretor.eval()
+    RNNinterpretor.to(DEVICE)
+
+
+    import matplotlib.backends.backend_pdf
+    
+    if train_restricted_test_fulldataset == True:
+        pdf = matplotlib.backends.backend_pdf.PdfPages(CodePath+"/saved_models/"+RNN_ID+"/plots/test_attention_fulldataset.pdf")
+    else:
+        pdf = matplotlib.backends.backend_pdf.PdfPages(CodePath+"/saved_models/"+RNN_ID+"/plots/test_attention.pdf")
+
+    for a in range(5): 
+
+        #Load a test event through interpretor
+        test_spectrum_diff, test_FCCDLabel, test_DLFLabel, test_extras, test_spectrum = next(iter(test_loader))
+        test_spectrum_diff = test_spectrum_diff.to(DEVICE).float()
+
+        attention_score = RNNinterpretor(test_spectrum_diff)
+
+        for i in range(BATCH_SIZE):
+            attention = attention_score[i].cpu().detach().numpy()
+            labels = {"FCCD1": test_extras["FCCD1"][i].item(), "FCCD2": test_extras["FCCD2"][i].item(), "DLF1": test_extras["DLF1"][i].item(), "DLF2": test_extras["DLF2"][i].item()}
+
+            #plot attention score on spectrum
+            fig = plot_attention(test_spectrum[i], attention, labels)
+
+            fig.savefig(pdf, format='pdf') 
+
+    pdf.close()
+    
+def plot_average_attention(dataset, test_loader, RNN_path, attention_mechanism="normal", RNN_ID=None, save_plots = False, train_restricted_test_fulldataset = False, FCCDonly = False):
+    "Function to plot the average attention score of all events in test loader with a random example spectra below to compare"
+    
+    if RNN_ID is None and save_plots==True:
+        print("You must set RNN_ID to save results!")
+        return 0
+    
+    DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    CodePath = os.path.dirname(os.path.abspath("__file__"))
+    BATCH_SIZE = test_loader.batch_size
+    
+    #Make RNNinterpretor object and set get_attention to true
+    if FCCDonly == True:
+        RNNinterpretor = RNN(dataset.get_histlen(),1, get_attention = True, attention_mechanism=attention_mechanism)
+    else:
+        RNNinterpretor = RNN(dataset.get_histlen(),2, get_attention = True, attention_mechanism=attention_mechanism)
+
+    #Load trained RNN dict to this
+    RNNinterpretor.load_state_dict(torch.load(RNN_path))
+    RNNinterpretor.eval()
+    RNNinterpretor.to(DEVICE)
+    
+    attention_sum = np.zeros(dataset.hist_length)
+    
+    for j, (spectrum_diff, FCCDLabel, DLFLabel, extras, spectrum) in enumerate(tqdm(test_loader)):
+        spectrum_diff = spectrum_diff.to(DEVICE).float()
+        attention_score = RNNinterpretor(spectrum_diff)
+        for i in range(BATCH_SIZE):
+            attention = attention_score[i].cpu().detach().numpy()
+            attention_sum += attention
+
+    average_attention = attention_sum/dataset.size
+    
+    #get random spectra to plot:
+    test_spectrum_diff, test_FCCDLabel, test_DLFLabel, test_extras, test_spectrum = next(iter(test_loader))
+    test_spectrum = test_spectrum[1].numpy()
+    
+    
+    fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(8,6))
+    binwidth = 0.5 #keV
+    bins = np.arange(0,450+binwidth,binwidth)
+    bins_centres = np.delete(bins+binwidth/2,-1)
+    
+    ax1.plot(bins_centres, average_attention)
+    ax2.plot(bins_centres, test_spectrum)
+    
+    ax1.set_ylabel("Average Attention")
+    ax1.set_yscale("log")
+    ax1.set_xlim(0,450)
+    ax2.set_ylabel("Example Spectra")
+    ax2.set_yscale("log")
+    ax2.set_xlabel("Energy / keV")
+    ax2.set_xlim(0,450)
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0, hspace=0)
+    
+    
+    if train_restricted_test_fulldataset == True:
+        plt.savefig(CodePath+"/saved_models/"+RNN_ID+"/plots/average_attention_fulldataset.pdf")
+    else:
+        plt.savefig(CodePath+"/saved_models/"+RNN_ID+"/plots/average_attention.pdf")
+    
+    return average_attention
     
 
 

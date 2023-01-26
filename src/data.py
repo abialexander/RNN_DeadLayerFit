@@ -39,10 +39,11 @@ class DL_Dataset(Dataset):
     "class for the dataset: MC energy spectra with different FCCD and DLF labels"
 
     CodePath = os.path.dirname(os.path.abspath("__file__"))
-    MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A/"
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A/"
 
-    def __init__(self, path = MC_PATH, restrict_dataset = False, restrict_dict = None, size=1000):
+    def __init__(self, path, restrict_dataset = False, restrict_dict = None, size=1000):
         
+        self.path = path
         self.event_dict = {}
         count = 0
         # Loop through all the files
@@ -185,14 +186,19 @@ class DL_Dataset(Dataset):
 
 
 #Load dataset
-def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1000):
+def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1000, path = None):
     "function to load the dataset"
+    
+    CodePath = os.path.dirname(os.path.abspath("__file__"))
+    MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A/"
     
     if restrict_dataset == True and restrict_dict is None:
         print("You must use kwarg restrict_dict in order to restrict dataset")
         return 0
 
-    dataset = DL_Dataset(restrict_dataset = restrict_dataset, restrict_dict=restrict_dict, size=size)
+    if path is None:
+        path = MC_PATH
+    dataset = DL_Dataset(restrict_dataset = restrict_dataset, restrict_dict=restrict_dict, size=size, path=path)
     validation_split = .3 #Split data set into training & testing with 7:3 ratio
     shuffle_dataset = True
     random_seed= 42222
