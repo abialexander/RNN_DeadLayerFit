@@ -38,12 +38,11 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 
-#The fully connected part of neural network
-
 #try increasing no of linear layers, from 2 to >2
 #try increasing dropout rate
 
 class FCNet(nn.Module):
+    "fully connected part of Neural Network"
     def __init__(self, first_unit, last_unit):
         super(FCNet, self).__init__()
         
@@ -66,10 +65,24 @@ class FCNet(nn.Module):
     def forward(self, x):
         return self.fcnet(x)
     
-
+class QuantileLoss(nn.Module):
+    """Quantile regression loss function.
+    https://www.evergreeninnovations.co/blog-quantile-loss-function-for-machine-learning/"""
+    def __init__(self, q):
+        super(QuantileLoss, self).__init__()
+        
+        self.q = q #quantile [0,1]
+               
+    def forward(self, yi, yip):
+        #p=prediction, yi=truth value, q=quantile
+        #For a set of values (i.e. a batch) the loss is the average
+        Loss = torch.mean(torch.max(self.q*(yi-yip), (self.q-1)*(yi-yip)))
+        return Loss
     
-#The RNN based model:
+
+
 class RNN(nn.Module):
+    "RNN Model"
     def __init__(self,histlen,num_class, get_attention = False, attention_mechanism = "normal"):
         super(RNN, self).__init__()
         
@@ -89,7 +102,7 @@ class RNN(nn.Module):
         self.get_attention = get_attention
         self.attention_mechanism = attention_mechanism #="normal" or " cosine"
 
-#   @torchsnooper.snoop() #uncomment for troubleshooting if training fails
+#     @torchsnooper.snoop() #uncomment for troubleshooting if training fails
     def forward(self, x):
         x = x.view(-1,self.seq_len,self.seg)
         bsize = x.size(0)

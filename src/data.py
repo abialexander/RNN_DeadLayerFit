@@ -41,8 +41,18 @@ class DL_Dataset(Dataset):
     CodePath = os.path.dirname(os.path.abspath("__file__"))
 #     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A/"
 
-    def __init__(self, path, restrict_dataset = False, restrict_dict = None, size=1000):
+    def __init__(self, path, restrict_dataset = False, restrict_dict = None, size=1000, path_MC2 = None):
         
+        
+        self.size = size #this is the no. pairs of MC spectra to sample 
+        self.hist_length = 900 #Energy Spectrum # of bins #binning: 0.5 keV bins from 0-450 keV:
+        self.energy_bin = np.linspace(0,450.0,self.hist_length+1) # Only look at events between 0 and 450 keV
+        self.restrict_dataset = restrict_dataset
+        self.restrict_dict = restrict_dict
+        
+        #---------------------------------
+        #MC1 (and MC2 if pathMC2 = None)
+        #---------------------------------
         self.path = path
         self.event_dict = {}
         count = 0
@@ -58,20 +68,35 @@ class DL_Dataset(Dataset):
         
             if a:
                 self.event_dict[a] = os.path.join(path, filename)
-
-                                 
+                        
         self.event_list = list(self.event_dict.keys()) #list of [FCCD, DLF]
         self.data_size = len(self.event_list) #this is the no. MC spectra
-        self.size = size #this is the no. pairs of MC spectra to sample 
-                                                                  
-        self.hist_length = 900 #Energy Spectrum # of bins #binning: 0.5 keV bins from 0-450 keV:
-        self.energy_bin = np.linspace(0,450.0,self.hist_length+1) # Only look at events between 0 and 450 keV
-        
         self.scaler = self.build_scaler() #performs a ~normalisation on each bin so that they are all significant
-        
-        self.restrict_dataset = restrict_dataset
-        self.restrict_dict = restrict_dict
-        
+         
+        #---------------------------------
+        #MC2 (IF MC1 AND MC2 FROM DIFFERENT PATHS)
+        #---------------------------------
+        self.path_MC2 = path_MC2
+        if self.path_MC2 is not None:
+            self.event_dict_MC2 = {}
+            count = 0
+            # Loop through all the files
+            for filename in os.listdir(path_MC2):
+                if count > 111111:
+                    break
+                count += 1
+
+                m = re.search('FCCD(.+?)mm_DLF', filename)
+                n = re.search('DLF(.+?)_frac', filename)
+                a = (float(m.group(1)),float(n.group(1)))
+
+                if a:
+                    self.event_dict_MC2[a] = os.path.join(path_MC2, filename)
+            
+            self.event_list_MC2 = list(self.event_dict_MC2.keys()) #list of [FCCD, DLF]
+            self.data_size_MC2 = len(self.event_list_MC2) #this is the no. MC spectra
+            self.scaler_MC2 = self.build_scaler(MC2=True) #performs a ~normalisation on each bin so that they are all significant
+   
         
     def __len__(self):
         return self.size
@@ -79,38 +104,41 @@ class DL_Dataset(Dataset):
     def get_histlen(self):
         return self.hist_length
 
-    
-    # This function applies standard scaler to each spectrum, converting them in to 0-centered with 1 standard deviation.
-    def build_scaler(self):
+    def build_scaler(self, MC2=False):
+        "applies standard scaler to each spectrum, converting them in to 0-centered with 1 standard deviation."
         hist_array = []
-        for i in tqdm(range(self.data_size)):
-                        
-            FCCD, DLF = self.event_list[i][0], self.event_list[i][1]
-            dead_layer_address = self.event_dict[(FCCD, DLF)]
-            hist_array.append(self.get_hist_magnitude(dead_layer_address).reshape(1,-1))
-            
-        hist_array = np.concatenate(hist_array,axis=0)
         
+        if MC2 == False:   
+            for i in tqdm(range(self.data_size)):
+                FCCD, DLF = self.event_list[i][0], self.event_list[i][1]
+                dead_layer_address = self.event_dict[(FCCD, DLF)]
+                hist_array.append(self.get_hist_magnitude(dead_layer_address).reshape(1,-1))
+        else:   
+            for i in tqdm(range(self.data_size_MC2)):
+                FCCD, DLF = self.event_list_MC2[i][0], self.event_list_MC2[i][1]
+                dead_layer_address = self.event_dict_MC2[(FCCD, DLF)]
+                hist_array.append(self.get_hist_magnitude(dead_layer_address).reshape(1,-1))            
+        
+        hist_array = np.concatenate(hist_array,axis=0)
         print(hist_array.shape)
         scaler = StandardScaler()
         scaler.fit(hist_array)
         return scaler
     
     
-    # This get the energy spectrum of each file
     def get_hist_magnitude(self,h5_address,MC=True):
-        
+        "This gets the energy spectrum of each file"
         df =  pd.read_hdf(h5_address, key="energy_hist")
         counts = df[0].to_numpy()
         bins = self.energy_bin #size 901, 0-450keV 0.5keV width
           
         if MC == True: #data doesnt need normalising, only MC
             counts = self.normalise_MC_counts(counts) 
-        
         return counts
     
+    
     def normalise_MC_counts(self, counts):
-        
+        "Normalises MC histograms to data histogram"
         #normalise MC to data`
         data_time = 30*60 #30 mins, 30*60s
         Ba133_activity = 116.1*10**3 #Bq
@@ -137,24 +165,36 @@ class DL_Dataset(Dataset):
         spectrum = self.scaler.transform(self.get_hist_magnitude(dead_layer_address).reshape(1,-1))
         
         #2nd spectrum
-        idx2 = np.random.randint(self.data_size)
-        while idx2 == idx:
-            idx2 = np.random.randint(self.data_size) #ensures we dont have same ind
-        FCCD2, DLF2 = self.event_list[idx2][0], self.event_list[idx2][1]
+        if self.path_MC2 is None:
+            idx2 = np.random.randint(self.data_size)
+            while idx2 == idx:
+                idx2 = np.random.randint(self.data_size) #ensures we dont have same ind
+            FCCD2, DLF2 = self.event_list[idx2][0], self.event_list[idx2][1]
+        else:
+            idx2 = np.random.randint(self.data_size_MC2)
+            FCCD2, DLF2 = self.event_list_MC2[idx2][0], self.event_list_MC2[idx2][1]
+          
         FCCD_diff, DLF_diff = FCCD-FCCD2, DLF - DLF2
-        
+
         #for restricted datasets, ensure FCCDdiff and DLFdiff satisfy given restriction
         if self.restrict_dataset == True: 
             while abs(FCCD_diff) > self.restrict_dict["maxFCCDdiff"] or abs(DLF_diff) > self.restrict_dict["maxDLFdiff"]:
-                idx2 = np.random.randint(self.data_size)
-                while idx2 == idx:
-                    idx2 = np.random.randint(self.data_size) #ensures we dont have same ind
-                FCCD2, DLF2 = self.event_list[idx2][0], self.event_list[idx2][1]
+                if self.path_MC2 is None:
+                    idx2 = np.random.randint(self.data_size)
+                    while idx2 == idx:
+                        idx2 = np.random.randint(self.data_size) #ensures we dont have same ind
+                    FCCD2, DLF2 = self.event_list[idx2][0], self.event_list[idx2][1]
+                else:
+                    idx2 = np.random.randint(self.data_size_MC2)
+                    FCCD2, DLF2 = self.event_list_MC2[idx2][0], self.event_list_MC2[idx2][1]
                 FCCD_diff, DLF_diff = FCCD-FCCD2, DLF - DLF2
-        
-        dead_layer_address2 = self.event_dict[(FCCD2, DLF2)]
-        spectrum2 = self.scaler.transform(self.get_hist_magnitude(dead_layer_address2).reshape(1,-1))
-        
+
+        if self.path_MC2 is None:
+            dead_layer_address2 = self.event_dict[(FCCD2, DLF2)]
+            spectrum2 = self.scaler.transform(self.get_hist_magnitude(dead_layer_address2).reshape(1,-1))
+        else:
+            dead_layer_address2 = self.event_dict_MC2[(FCCD2, DLF2)]
+            spectrum2 = self.scaler_MC2.transform(self.get_hist_magnitude(dead_layer_address2).reshape(1,-1))     
         
         #compute difference and make binary label
         if FCCD_diff >=0:
@@ -165,6 +205,9 @@ class DL_Dataset(Dataset):
             DLF_diff_label = 1
         else:
             DLF_diff_label = 0
+        
+        if self.path_MC2 is not None: #when DLF2=1, dont want binary label
+            DLF_diff_label = DLF 
             
         spectrum_diff = spectrum - spectrum2
         
@@ -186,7 +229,7 @@ class DL_Dataset(Dataset):
 
 
 #Load dataset
-def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1000, path = None):
+def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1000, path = None, path_MC2 = None):
     "function to load the dataset"
     
     CodePath = os.path.dirname(os.path.abspath("__file__"))
@@ -198,7 +241,7 @@ def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1
 
     if path is None:
         path = MC_PATH
-    dataset = DL_Dataset(restrict_dataset = restrict_dataset, restrict_dict=restrict_dict, size=size, path=path)
+    dataset = DL_Dataset(restrict_dataset = restrict_dataset, restrict_dict=restrict_dict, size=size, path=path, path_MC2 = path_MC2)
     validation_split = .3 #Split data set into training & testing with 7:3 ratio
     shuffle_dataset = True
     random_seed= 42222
