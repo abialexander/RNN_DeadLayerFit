@@ -22,7 +22,7 @@ This labeled data is stored as binned histograms.
 
 - `data/<detector_name>_data/training_data_<detector_name>/`: 1000 random FCCDs and DLFs
 - `data/<detector_name>_data/training_data_<detector_name>_FCCDonly/`: 1000 random FCCDs, all DLFs=1.0
-- `data/<detector_name>_data/`: single experimental data file
+- `data/<detector_name>_data/data_hist_Ba_<detector_name>.h5`: single experimental data file
 
 ### RNN and Workflow
 Functions and classes: `src/`
