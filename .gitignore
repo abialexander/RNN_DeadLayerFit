@@ -4,3 +4,8 @@ log/
 src/__pycache__/
 saved_models/old/
 data/V05268A_data/old/
+
+!saved_models/
+saved_models/*
+!saved_models/RNN_MC2DLF1_20epochs_LR0.005_fulldataset_10000trials/
+

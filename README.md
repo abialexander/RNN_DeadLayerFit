@@ -20,9 +20,9 @@ For each detector (just V05268A for now), randomly generated combinations of FCC
 for a linear transition layer were created. 
 This labeled data is stored as binned histograms. 
 
-- `data/<detector_name>_data/training_data_<detector_name>/`: 1000 random FCCDs and DLFs
-- `data/<detector_name>_data/training_data_<detector_name>_FCCDonly/`: 1000 random FCCDs, all DLFs=1.0
-- `data/<detector_name>_data/data_hist_Ba_<detector_name>.h5`: single experimental data file
+- `data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/`: ~5000 random FCCDs and random DLFs
+- `data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/`: 5000 random FCCDs, all DLFs=1.0
+- `data/V05268A_data/data_hist_Ba_V05268A.h5`: single experimental data file
 
 ### RNN and Workflow
 Functions and classes: `src/`
@@ -40,6 +40,7 @@ Different versions of the RNN (i.e. with different training parameters or traine
 are saved as pytorch pkl files in `saved_models/<RNN_ID>/`. 
 In this folder we also save the results for each RNN - i.e. plots and json files with performance metrics 
 (e.g. accuracy, recall and precision).
+These are excluded from the github (they are in the .gitignore) with the exception of RNN_ID = `RNN_MC2DLF1_20epochs_LR0.005_fulldataset_10000trials`.
 
 
 
