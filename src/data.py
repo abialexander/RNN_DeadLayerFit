@@ -35,11 +35,41 @@ from tqdm import tqdm
 from torch.cuda.amp import autocast
 
 
+def plotTrainingData(folder, bins=50):
+    FCCD_list, DLF_list = [],[]
+    for filename in os.listdir(folder):
+        m = re.search('FCCD(.+?)mm_DLF', filename)
+        n = re.search('DLF(.+?)_frac', filename)
+        a = (float(m.group(1)),float(n.group(1)))
+        FCCD_list.append(float(m.group(1)))
+        DLF_list.append(float(n.group(1)))
+    no_files = len(FCCD_list)
+    print("no files: ", str(no_files))
+    fig, (ax_FCCD, ax_DLF) = plt.subplots(1, 2, figsize=(12,4))
+    ax_FCCD.hist(FCCD_list,bins, histtype="step")
+    ax_DLF.hist(DLF_list,bins, histtype="step")
+    ax_FCCD.set_xlabel("FCCD / mm")
+    ax_DLF.set_xlabel("DLF")
+    ax_FCCD.set_ylabel("# training files / bin")
+    ax_DLF.set_ylabel("# training files / bin")
+    info = "\n".join([r'#files: '+str(no_files), r'#bins: '+str(bins)])
+    ax_FCCD.text(0.05, 0.1, info, transform=ax_FCCD.transAxes, fontsize=10,verticalalignment='top')
+    ax_DLF.text(0.05, 0.1, info, transform=ax_DLF.transAxes, fontsize=10,verticalalignment='top')
+#     fig.suptitle(folder)
+
+    fig2, ax2 = plt.subplots()
+    ax2.scatter(FCCD_list, DLF_list, s=4)
+    ax2.set_xlabel("FCCD / mm")
+    ax2.set_ylabel("DLF")
+#     fig2.suptitle(folder)
+    
+    plt.show()
+
+
 class DL_Dataset(Dataset):
     "class for the dataset: MC energy spectra with different FCCD and DLF labels"
 
     CodePath = os.path.dirname(os.path.abspath("__file__"))
-#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A/"
 
     def __init__(self, path, restrict_dataset = False, restrict_dict = None, size=1000, path_MC2 = None):
         
@@ -233,7 +263,8 @@ def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1
     "function to load the dataset"
     
     CodePath = os.path.dirname(os.path.abspath("__file__"))
-    MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A/"
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A/"
+    MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
     
     if restrict_dataset == True and restrict_dict is None:
         print("You must use kwarg restrict_dict in order to restrict dataset")

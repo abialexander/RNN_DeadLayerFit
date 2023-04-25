@@ -2,3 +2,5 @@ old_scripts/
 .ipynb_checkpoints/
 log/
 src/__pycache__/
+saved_models/old/
+data/V05268A_data/old/
