@@ -2,7 +2,8 @@ from matplotlib import collections as matcoll
 from matplotlib import cm
 from matplotlib import gridspec
 import matplotlib.backends.backend_pdf
-from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.metrics import roc_curve, roc_auc_score, mean_squared_error
+import math
 from src.RNN import *
 from src.data import *
 
@@ -504,8 +505,9 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, misclassified_trials_plots
                         else:
                             DLF_misclassified_DLF_RNNoutput.append(RNNoutput_DLF)
                             
-               
-    #Compute accuracy
+    #================================           
+    #Compute accuracies
+    #================================ 
     print("FCCD accuracies: ")
     accuracy_FCCD, precision_FCCD, recall_FCCD = compute_accuracy(FCCD_RNNoutput_cut, FCCD_labels_all, FCCD_RNNoutputs_all, print_results=True)
     print("accuracy: ", accuracy_FCCD)
@@ -527,7 +529,18 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, misclassified_trials_plots
             print("recall: ", recall_DLF)
             accuracies = {"accuracy_FCCD":accuracy_FCCD, "precision_FCCD":precision_FCCD, "recall_FCCD":recall_FCCD, "accuracy_DLF":accuracy_DLF, "precision_DLF":precision_DLF, "recall_DLF":recall_DLF, "decision_thresholds":decision_thresholds}
 
+
+    #Append results to dict
+    if FCCDonly == True:
+        accuracies = {"accuracy_FCCD":accuracy_FCCD, "precision_FCCD":precision_FCCD, "recall_FCCD":recall_FCCD, "decision_thresholds":decision_thresholds}
+    elif quantileRegressionDLF==True:
+        accuracies = {"accuracy_FCCD":accuracy_FCCD, "precision_FCCD":precision_FCCD, "recall_FCCD":recall_FCCD,"accuracy_DLF":accuracy_DLF, "decision_thresholds":decision_thresholds}
+    else:
+        accuracies = {"accuracy_FCCD":accuracy_FCCD, "precision_FCCD":precision_FCCD, "recall_FCCD":recall_FCCD, "accuracy_DLF":accuracy_DLF, "precision_DLF":precision_DLF, "recall_DLF":recall_DLF, "decision_thresholds":decision_thresholds}            
+    
+    #================================ 
     # Performance Plots
+    #================================ 
     if FCCDonly == True:
         fig, ax_FCCD = plt.subplots()
     else:
@@ -563,10 +576,6 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, misclassified_trials_plots
             ax_DLF.set_xlabel("DLF RNNoutput")
             ax_DLF.vlines(DLF_RNNoutput_cut, min(counts), 2*max(counts), linestyles="dashed", color="gray", label ="cut")
             ax_DLF.set_yscale("log")
-
-    
-    plt.show()
-    
     if save_results == True:
         if train_restricted_test_fulldataset == True:
             fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_RNN_performance_fulldataset"
@@ -576,6 +585,10 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, misclassified_trials_plots
         # fig_FCCD.savefig(fn+"_FCCD.png")
         # fig_DLF.savefig(fn+"_DLF.png")
     
+    
+    #================================ 
+    # Plot ROC Curve
+    #================================ 
     
     if roc_curve == True:
       
@@ -610,6 +623,7 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, misclassified_trials_plots
             ax_DLF.text(0.75, 0.35, 'AUC: %.3f'%roc_auc_DLF , transform=ax_DLF.transAxes, fontsize=10,verticalalignment='top')
 
         plt.tight_layout()
+        
         if save_results == True:
             if train_restricted_test_fulldataset == True:
                 fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_roc_fulldataset.png"
@@ -617,28 +631,25 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, misclassified_trials_plots
                 fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_roc.png"
             plt.savefig(fn)
         
+        #Append results to dict
         if FCCDonly == True or quantileRegressionDLF==True:
-            accuracies = {"accuracy_FCCD":accuracy_FCCD, "precision_FCCD":precision_FCCD, "recall_FCCD":recall_FCCD, "roc_auc_FCCD": roc_auc_FCCD, "decision_thresholds":decision_thresholds}
+            accuracies["roc_auc_FCCD"] = roc_auc_FCCD
         else:
-            accuracies = {"accuracy_FCCD":accuracy_FCCD, "precision_FCCD":precision_FCCD, "recall_FCCD":recall_FCCD, "roc_auc_FCCD": roc_auc_FCCD, "accuracy_DLF":accuracy_DLF, "precision_DLF":precision_DLF, "recall_DLF":recall_DLF, "decision_thresholds":decision_thresholds, "roc_auc_DLF": roc_auc_DLF}
-    
-    
-    if save_results == True:
-        if train_restricted_test_fulldataset == True:
-            fn = CodePath+"/saved_models/"+RNN_ID+"/test_accuracies_fulldataset.json"
-        else:
-            fn = CodePath+"/saved_models/"+RNN_ID+"/test_accuracies.json"
-        with open(fn, "w") as outfile:
-            json.dump(accuracies, outfile, indent=4)
-  
-    
+            accuracies["roc_auc_FCCD"] = roc_auc_FCCD
+            accuracies["roc_auc_DLF"] = roc_auc_DLF
+            
+    #================================ 
+    # Plot Misclassified Trials Plots
+    #================================ 
     if misclassified_trials_plots == True:
 
         print("")   
         totalTrials = len(FCCD_labels_all)
         if quantileRegressionDLF == True:
             DLF_misclassified_DLF_RNNoutput = [DLF_misclassified_DLF_RNNoutputs_q10,DLF_misclassified_DLF_RNNoutputs_q50,DLF_misclassified_DLF_RNNoutputs_q90]
-        plotMisclassifiedTrials(RNN_ID, CodePath, totalTrials,
+        
+        
+        RMSEmisclassified = plotMisclassifiedTrials(RNN_ID, CodePath, totalTrials,
                             FCCD_misclassified_FCCD_diff,
                             FCCD_misclassified_FCCD1,
                             FCCD_misclassified_FCCD2,
@@ -655,7 +666,23 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, misclassified_trials_plots
                             train_restricted_test_fulldataset=train_restricted_test_fulldataset,
                             FCCDonly = FCCDonly,
                             save_results = True)
-
+        
+        #append results to dict
+        accuracies["RMSEmisclassified"] = RMSEmisclassified
+        
+    
+    #================================ 
+    # Save dict of all key results
+    #================================ 
+    
+    if save_results == True:
+        if train_restricted_test_fulldataset == True:
+            fn = CodePath+"/saved_models/"+RNN_ID+"/test_accuracies_fulldataset.json"
+        else:
+            fn = CodePath+"/saved_models/"+RNN_ID+"/test_accuracies.json"
+        with open(fn, "w") as outfile:
+            json.dump(accuracies, outfile, indent=4)  
+    
     return accuracies
 
 def plotMisclassifiedTrials(RNN_ID, CodePath, totalTrials,
@@ -676,7 +703,8 @@ def plotMisclassifiedTrials(RNN_ID, CodePath, totalTrials,
                             FCCDonly = False,
                             save_results = True):
     """
-    Make set of plots for the misclassified trials
+    Make set of plots for the misclassified trials.
+    Returns: dictionary of the RMSE for the scatter plots of FCCD1 V FCCD2
     """                    
     
     if quantileRegressionDLF == True:
@@ -745,7 +773,9 @@ def plotMisclassifiedTrials(RNN_ID, CodePath, totalTrials,
             plt.savefig(fn)
 
 
-    #FCCD scatter - FCCD1 vs FCCD2, DLF1 vs DLF2
+    #FCCD misclassified scatter - FCCD1 vs FCCD2, DLF1 vs DLF2
+    NoMisclassifiedFCCD=len(FCCD_misclassified_FCCD1)
+    RMSE_FCCDmisclassified_FCCD = math.sqrt(mean_squared_error(FCCD_misclassified_FCCD1, FCCD_misclassified_FCCD2))
     if FCCDonly == False:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,5))
     else:
@@ -757,8 +787,10 @@ def plotMisclassifiedTrials(RNN_ID, CodePath, totalTrials,
     ax1.set_xlim(0,2)
     ax1.set_ylim(0,2)
     ax1.axline((0, 0), slope=1, color='grey', linestyle="dashed", label="y=x line")
-    ax1.text(0.05, 0.95, 'total: '+str(len(FCCD_misclassified_FCCD1)), transform=ax1.transAxes, fontsize=10,verticalalignment='top')
+    info_str = "\n".join(['total: '+str(len(FCCD_misclassified_FCCD1)), 'RMSE: '+str(np.around(RMSE_FCCDmisclassified_FCCD,3))])
+    ax1.text(0.05, 0.95, info_str, transform=ax1.transAxes, fontsize=10,verticalalignment='top')
     ax1.legend(loc="lower right")
+    
     if FCCDonly == False:
         ax2.scatter(FCCD_misclassified_DLF1, FCCD_misclassified_DLF2, color="orange", label="trials")
         ax2.set_xlabel("DLF 1")
@@ -776,8 +808,12 @@ def plotMisclassifiedTrials(RNN_ID, CodePath, totalTrials,
             fn=CodePath+"/saved_models/"+RNN_ID+"/plots/test_misclassifiedFCCD_scatter.png"
         plt.savefig(fn)
 
-    #DLF scatter - FCCD1 vs FCCD2, DLF1 vs DLF2
+    #DLF misclassified scatter - FCCD1 vs FCCD2, DLF1 vs DLF2
+    RMSE_DLFmisclassified_FCCD = None
+    NoMisclassifiedDLF=None
     if FCCDonly == False:
+        NoMisclassifiedDLF=len(DLF_misclassified_DLF1)
+        RMSE_DLFmisclassified_FCCD = math.sqrt(mean_squared_error(DLF_misclassified_FCCD1, DLF_misclassified_FCCD2))
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12,5))
         fig.suptitle("Misclassified trials: DLF", fontsize=12)
         ax1.scatter(DLF_misclassified_FCCD1, DLF_misclassified_FCCD2, label="trials")
@@ -786,7 +822,8 @@ def plotMisclassifiedTrials(RNN_ID, CodePath, totalTrials,
         ax1.set_xlim(0,2)
         ax1.set_ylim(0,2)
         ax1.axline((0, 0), slope=1, color='grey', linestyle="dashed", label="y=x line")
-        ax1.text(0.05, 0.95, 'total: '+str(len(DLF_misclassified_FCCD1)), transform=ax1.transAxes, fontsize=10,verticalalignment='top')
+        info_str = "\n".join(['total: '+str(len(DLF_misclassified_FCCD1)), 'RMSE: '+str(np.around(RMSE_DLFmisclassified_FCCD,3))])
+        ax1.text(0.05, 0.95, info_str, transform=ax1.transAxes, fontsize=10,verticalalignment='top')
         ax1.legend(loc="lower right")
         ax2.scatter(DLF_misclassified_DLF1, DLF_misclassified_DLF2, color="orange", label="trials")
         ax2.set_xlabel("DLF 1")
@@ -803,6 +840,17 @@ def plotMisclassifiedTrials(RNN_ID, CodePath, totalTrials,
         else:
             fn=CodePath+"/saved_models/"+RNN_ID+"/plots/test_misclassifiedDLF_scatter.png"
         plt.savefig(fn)
+    
+    RMSEmisclassified = {"RMSE_FCCDmisclassified_FCCD": RMSE_FCCDmisclassified_FCCD, 
+                         "RMSE_DLFmisclassified_FCCD": RMSE_DLFmisclassified_FCCD,
+                         "totalTrials": totalTrials,
+                         "NoMisclassifiedFCCD": NoMisclassifiedFCCD,
+                         "NoMisclassifiedDLF": NoMisclassifiedDLF
+                        }
+    
+    return RMSEmisclassified
+    
+     
 
 def plot_attention(spectrum, attscore, labels, ax= None, fig=None):
     '''
