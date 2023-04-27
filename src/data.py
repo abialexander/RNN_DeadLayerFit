@@ -71,7 +71,8 @@ class DL_Dataset(Dataset):
 
     CodePath = os.path.dirname(os.path.abspath("__file__"))
 
-    def __init__(self, path, restrict_dataset = False, restrict_dict = None, size=1000, path_MC2 = None):
+    def __init__(self, path, restrict_dataset = False, restrict_dict = None, size=1000, path_MC2 = None,
+                 path_data=None, path_MCBest=None, return_data_MCBest=False):
         
         
         self.size = size #this is the no. pairs of MC spectra to sample 
@@ -79,6 +80,11 @@ class DL_Dataset(Dataset):
         self.energy_bin = np.linspace(0,450.0,self.hist_length+1) # Only look at events between 0 and 450 keV
         self.restrict_dataset = restrict_dataset
         self.restrict_dict = restrict_dict
+        
+        #For when returning data-MCbest instead of MC Training data
+        self.path_data = path_data
+        self.path_MCBest = path_MCBest
+        self.return_data_MCBest = return_data_MCBest #Boolean
         
         #---------------------------------
         #MC1 (and MC2 if pathMC2 = None)
@@ -187,68 +193,71 @@ class DL_Dataset(Dataset):
         #OLD: 1st spectra read idx, 2nd spectra is random, then compute difference
         #NEW: both spectra random
         
-        #1st spectrum
-        idx = np.random.randint(self.data_size)
-        FCCD, DLF = self.event_list[idx][0], self.event_list[idx][1]
-        dead_layer_address = self.event_dict[(FCCD, DLF)]
-        spectrum_original = self.get_hist_magnitude(dead_layer_address)
-        spectrum = self.scaler.transform(self.get_hist_magnitude(dead_layer_address).reshape(1,-1))
-        
-        #2nd spectrum
-        if self.path_MC2 is None:
-            idx2 = np.random.randint(self.data_size)
-            while idx2 == idx:
-                idx2 = np.random.randint(self.data_size) #ensures we dont have same ind
-            FCCD2, DLF2 = self.event_list[idx2][0], self.event_list[idx2][1]
-        else:
-            idx2 = np.random.randint(self.data_size_MC2)
-            FCCD2, DLF2 = self.event_list_MC2[idx2][0], self.event_list_MC2[idx2][1]
-          
-        FCCD_diff, DLF_diff = FCCD-FCCD2, DLF - DLF2
+        if self.return_data_MCBest == False:
 
-        #for restricted datasets, ensure FCCDdiff and DLFdiff satisfy given restriction
-        if self.restrict_dataset == True: 
-            while abs(FCCD_diff) > self.restrict_dict["maxFCCDdiff"] or abs(DLF_diff) > self.restrict_dict["maxDLFdiff"]:
-                if self.path_MC2 is None:
-                    idx2 = np.random.randint(self.data_size)
-                    while idx2 == idx:
-                        idx2 = np.random.randint(self.data_size) #ensures we dont have same ind
-                    FCCD2, DLF2 = self.event_list[idx2][0], self.event_list[idx2][1]
-                else:
-                    idx2 = np.random.randint(self.data_size_MC2)
-                    FCCD2, DLF2 = self.event_list_MC2[idx2][0], self.event_list_MC2[idx2][1]
-                FCCD_diff, DLF_diff = FCCD-FCCD2, DLF - DLF2
+            #1st spectrum
+            idx = np.random.randint(self.data_size)
+            FCCD, DLF = self.event_list[idx][0], self.event_list[idx][1]
+            dead_layer_address = self.event_dict[(FCCD, DLF)]
+            spectrum_original = self.get_hist_magnitude(dead_layer_address)
+            spectrum = self.scaler.transform(self.get_hist_magnitude(dead_layer_address).reshape(1,-1))
 
-        if self.path_MC2 is None:
-            dead_layer_address2 = self.event_dict[(FCCD2, DLF2)]
-            spectrum2 = self.scaler.transform(self.get_hist_magnitude(dead_layer_address2).reshape(1,-1))
-        else:
-            dead_layer_address2 = self.event_dict_MC2[(FCCD2, DLF2)]
-            spectrum2 = self.scaler_MC2.transform(self.get_hist_magnitude(dead_layer_address2).reshape(1,-1))     
+            #2nd spectrum
+            if self.path_MC2 is None:
+                idx2 = np.random.randint(self.data_size)
+                while idx2 == idx:
+                    idx2 = np.random.randint(self.data_size) #ensures we dont have same ind
+                FCCD2, DLF2 = self.event_list[idx2][0], self.event_list[idx2][1]
+            else:
+                idx2 = np.random.randint(self.data_size_MC2)
+                FCCD2, DLF2 = self.event_list_MC2[idx2][0], self.event_list_MC2[idx2][1]
+
+            FCCD_diff, DLF_diff = FCCD-FCCD2, DLF - DLF2
+
+            #for restricted datasets, ensure FCCDdiff and DLFdiff satisfy given restriction
+            if self.restrict_dataset == True: 
+                while abs(FCCD_diff) > self.restrict_dict["maxFCCDdiff"] or abs(DLF_diff) > self.restrict_dict["maxDLFdiff"]:
+                    if self.path_MC2 is None:
+                        idx2 = np.random.randint(self.data_size)
+                        while idx2 == idx:
+                            idx2 = np.random.randint(self.data_size) #ensures we dont have same ind
+                        FCCD2, DLF2 = self.event_list[idx2][0], self.event_list[idx2][1]
+                    else:
+                        idx2 = np.random.randint(self.data_size_MC2)
+                        FCCD2, DLF2 = self.event_list_MC2[idx2][0], self.event_list_MC2[idx2][1]
+                    FCCD_diff, DLF_diff = FCCD-FCCD2, DLF - DLF2
+
+            if self.path_MC2 is None:
+                dead_layer_address2 = self.event_dict[(FCCD2, DLF2)]
+                spectrum2 = self.scaler.transform(self.get_hist_magnitude(dead_layer_address2).reshape(1,-1))
+            else:
+                dead_layer_address2 = self.event_dict_MC2[(FCCD2, DLF2)]
+                spectrum2 = self.scaler_MC2.transform(self.get_hist_magnitude(dead_layer_address2).reshape(1,-1))     
+
+            #compute difference and make binary label
+            if FCCD_diff >=0:
+                FCCD_diff_label = 1
+            else:
+                FCCD_diff_label = 0
+            if DLF_diff >=0:
+                DLF_diff_label = 1
+            else:
+                DLF_diff_label = 0
+
+            if self.path_MC2 is not None: #when DLF2=1, dont want binary label
+                DLF_diff_label = DLF 
+
+            spectrum_diff = spectrum - spectrum2
+
+            #extras = info needed to investigate specific trials
+            extras = {"FCCD1": FCCD, "FCCD2": FCCD2, "FCCD_diff": FCCD_diff, "DLF1": DLF, "DLF2": DLF2, "DLF_diff": DLF_diff}
+
+            return spectrum_diff, FCCD_diff_label, DLF_diff_label, extras, spectrum_original
         
-        #compute difference and make binary label
-        if FCCD_diff >=0:
-            FCCD_diff_label = 1
         else:
-            FCCD_diff_label = 0
-        if DLF_diff >=0:
-            DLF_diff_label = 1
-        else:
-            DLF_diff_label = 0
-        
-        if self.path_MC2 is not None: #when DLF2=1, dont want binary label
-            DLF_diff_label = DLF 
+            spectrum_diff, spectrum_data, spectrum_MCBest = self.get_data_MCBest_spectrum_diff()
+            return spectrum_diff, spectrum_data, spectrum_MCBest
             
-        spectrum_diff = spectrum - spectrum2
-        
-        #extras = info needed to investigate specific trials
-        extras = {"FCCD1": FCCD, "FCCD2": FCCD2, "FCCD_diff": FCCD_diff, "DLF1": DLF, "DLF2": DLF2, "DLF_diff": DLF_diff}
-        
-        return spectrum_diff, FCCD_diff_label, DLF_diff_label, extras, spectrum_original
-    
-        
-    def get_data(self):
-        return self.scaler.transform(self.get_hist_magnitude(DATA_PATH, MC=False).reshape(1,-1))
     
     def get_hist_range(self):
         return self.energy_bin
@@ -256,27 +265,41 @@ class DL_Dataset(Dataset):
     def get_scaler(self):
         return self.scaler
     
+    def get_data_MCBest_spectrum_diff(self):
+        spectrum_data = self.get_hist_magnitude(self.path_data, MC=False)
+        spectrum_MCBest = self.get_hist_magnitude(self.path_MCBest, MC=True)
+        data = self.scaler.transform(spectrum_data.reshape(1,-1))
+        MCBest = self.scaler.transform(spectrum_MCBest.reshape(1,-1))
+        spectrum_diff = data - MCBest
+        return spectrum_diff, spectrum_data, spectrum_MCBest
+    
 
 
 #Load dataset
-def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1000, path = None, path_MC2 = None):
+def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1000, path = None, path_MC2 = None, 
+              path_data=None, path_MCBest=None, return_data_MCBest=False):
     "function to load the dataset"
-    
-    CodePath = os.path.dirname(os.path.abspath("__file__"))
-#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A/"
-    MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
     
     if restrict_dataset == True and restrict_dict is None:
         print("You must use kwarg restrict_dict in order to restrict dataset")
         return 0
+    if return_data_MCBest==True and (path_data == None or path_MCBest==None):
+        print("You must set path_data and path_MCBest in order to return_data_MCBest")
+        return 0
 
+    CodePath = os.path.dirname(os.path.abspath("__file__"))
+    MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
     if path is None:
         path = MC_PATH
-    dataset = DL_Dataset(restrict_dataset = restrict_dataset, restrict_dict=restrict_dict, size=size, path=path, path_MC2 = path_MC2)
+#     dataset = DL_Dataset(restrict_dataset = restrict_dataset, restrict_dict=restrict_dict, size=size, path=path, path_MC2 = path_MC2)
+    
+    dataset = DL_Dataset(path, restrict_dataset = restrict_dataset, restrict_dict=restrict_dict, size=size, 
+                         path_MC2 = path_MC2, path_data=path_data, path_MCBest=path_MCBest, return_data_MCBest=return_data_MCBest)
+    
+    
     validation_split = .3 #Split data set into training & testing with 7:3 ratio
     shuffle_dataset = True
     random_seed= 42222
-
     dataset_size = int(len(dataset))
     indices = list(range(dataset_size))
     split = int(np.floor(validation_split * dataset_size))
@@ -294,5 +317,15 @@ def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1
     train_loader = data_utils.DataLoader(dataset, batch_size=batch_size, sampler=train_sampler, drop_last=True)
     test_loader = data_utils.DataLoader(dataset, batch_size=batch_size,sampler=valid_sampler,  drop_last=True)
 
-    return train_loader,test_loader, dataset  
+    return train_loader,test_loader, dataset
+        
+        
+   
+
+
+
+
+
+
+
     

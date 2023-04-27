@@ -13,16 +13,17 @@ the dead layer parameters of high purity germanium detectors used in the LEGEND 
 6) Looking at the attention score, this will tell you which part of the spectrum the network has used to make the decision.
 7) Trying to understand why a too low/too high FCCD width would have that kind of effect on that part of the spectrum, is it because of the MC simulation? transfer function? etc. -->
 
-## Training Data
+## Data
 The training data are post-processed MC simulations of a germanium detector characterised at the HADES underground laboratory with different dead layer parameters (the labels). 
 The detectors are exposed to uncollimated Ba-133, at 78.5 mm above top of cryostat and the data is the energy spectrum recorded by the detector.
 For each detector (just V05268A for now), randomly generated combinations of FCCD (Full Charge Collection Depth) and DLF (Dead Layer Fraction) 
 for a linear transition layer were created. 
 This labeled data is stored as binned histograms. 
 
-- `data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/`: ~5000 random FCCDs and random DLFs
-- `data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/`: 5000 random FCCDs, all DLFs=1.0
-- `data/V05268A_data/data_hist_Ba_V05268A.h5`: single experimental data file
+- `data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/`: ~5000 MC with random FCCDs and random DLFs
+- `data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/`: ~5000 MC with random FCCDs, all DLFs=1.0
+- `data/V05268A_data/experimental_data_V05268A.h5`: single experimental data file
+- `data/V05268A_data/MCBestFit_V05268A_FCCD0.97mm/`: 11 MC with fixed best fit FCCD (0.97mm) from traditional method, and evenly varied DLFs = [0.0,1.0]
 
 ## RNN and Workflow
 Functions and classes: `src/`

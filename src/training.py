@@ -275,7 +275,10 @@ def train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE,
         else:
             training_results(NUM_EPOCHS, loss_values, FCCD_accuracy_values, DLF_accuracy_values, save_plots = True, RNN_ID = RNN_ID)
     
-    return FCCD_accuracy_values, DLF_accuracy_values, TotalLoss_values
+    if RegressionDLF==True:
+        return FCCD_accuracy_values, DLF_accuracy_values, TotalLoss_values
+    else:
+        return FCCD_accuracy_values, DLF_accuracy_values, loss_values
 
 def training_results(NUM_EPOCHS, loss_values, FCCD_accuracy_values, DLF_accuracy_values, save_plots = False, RNN_ID = None):
     "function to plot the loss_values and training accuracies as a function of epoch"
@@ -887,7 +890,7 @@ def plot_attention(spectrum, attscore, labels, ax= None, fig=None):
     info_str = '\n'.join((r'FCCD 1=%s'%(labels["FCCD1"]), r'FCCD 2=%s'%(labels["FCCD2"]), r'DLF 1=%s'%(labels["DLF1"]), r'DLF 2=%s'%(labels["DLF2"])))
     plt.text(0, 0.98, info_str, transform=ax.transAxes, fontsize=10 ,verticalalignment='center') 
     
-    return fig
+    return fig, ax
 
 
 def plot_multiple_attention(dataset, test_loader, RNN_path, attention_mechanism="normal", RNN_ID=None, 
@@ -934,7 +937,7 @@ def plot_multiple_attention(dataset, test_loader, RNN_path, attention_mechanism=
             labels = {"FCCD1": test_extras["FCCD1"][i].item(), "FCCD2": test_extras["FCCD2"][i].item(), "DLF1": test_extras["DLF1"][i].item(), "DLF2": test_extras["DLF2"][i].item()}
 
             #plot attention score on spectrum
-            fig = plot_attention(test_spectrum[i], attention, labels)
+            fig, ax = plot_attention(test_spectrum[i], attention, labels)
             fig.savefig(pdf, format='pdf') 
 
     pdf.close()
@@ -1004,6 +1007,68 @@ def plot_average_attention(dataset, test_loader, RNN_path, attention_mechanism="
         plt.savefig(CodePath+"/saved_models/"+RNN_ID+"/plots/average_attention.pdf")
     
     return average_attention
+    
+
+def test_RNN_RealData(RNN_ID, dataset, spectrum_diff, spectrum_data, spectrum_MCBest, labels_MCBest):
+    """
+    Feed DATA-MCBest to an RNN, return RNN outputs and plot attention.
+    Currently only for quantileRegressionDLF.
+    """
+    
+    DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    CodePath = os.path.dirname(os.path.abspath("__file__"))
+    
+    RNN_path = CodePath+"/saved_models/"+RNN_ID+"/"+RNN_ID+".pkl"
+    
+    #Get RNN outputs
+    RNNclassifier = RNN(dataset.get_histlen(),4)
+    RNNclassifier.eval()
+    RNNclassifier.to(DEVICE)
+    with torch.no_grad():
+        spectrum_diff = spectrum_diff.to(DEVICE).float()
+        outputs = RNNclassifier(spectrum_diff)
+        outputs = outputs.cpu().data.numpy()
+    
+    print("RNN Outputs: ")
+    print(outputs)
+    
+    #Get RNN Attention Score
+    RNNinterpretor = RNN(dataset.get_histlen(),4, get_attention = True, attention_mechanism="normal")
+    RNNinterpretor.load_state_dict(torch.load(RNN_path))
+    RNNinterpretor.eval()
+    RNNinterpretor.to(DEVICE)
+    
+    attention_score = RNNinterpretor(spectrum_diff)
+    attention = attention_score[0].cpu().detach().numpy()
+    
+    #plot 1
+    labels = {"FCCD1": "Data", "FCCD2": labels_MCBest["FCCD"], "DLF1": "Data", "DLF2": labels_MCBest["DLF"]}
+    fig,ax = plot_attention(spectrum_data, attention, labels)
+    
+    #Plot 2
+    fig1, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(8,6))
+    binwidth = 0.5 #keV
+    bins = np.arange(0,450+binwidth,binwidth)
+    bins_centres = np.delete(bins+binwidth/2,-1)
+    ax1.plot(bins_centres, attention, label="attention")
+    ax2.plot(bins_centres, spectrum_data, label="Data")
+    ax2.plot(bins_centres, spectrum_MCBest, label="MCBest- FCCD: "+str(labels_MCBest["FCCD"])+"mm, DLF: "+str(labels_MCBest["DLF"]))
+    
+    ax1.set_ylabel("Attention")
+    ax1.set_yscale("log")
+    ax1.set_xlim(0,450)
+    ax2.set_ylabel("Counts / "+str(binwidth)+" keV")
+    ax2.set_yscale("log")
+    ax2.set_xlabel("Energy / keV")
+    ax2.set_xlim(0,450)
+    ax2.legend()
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0, hspace=0)
+    
+    plt.show()
+    
+    return outputs
+
     
 
 
