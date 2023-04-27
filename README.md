@@ -31,7 +31,7 @@ Functions and classes: `src/`
 - `src/RNN.py`: Classes and functions for the RNN
 - `src/training.py`: Classes and functions for training and evaluating of the RNN
 
-The workflow is controlled by jupyter notebooks that use the functions and classes from `/src/'
+The workflow is controlled by jupyter notebooks that use the functions and classes from `/src/`
 - `RNN_DeadLayerFit.ipynb`: Original notebook,  for fitting FCCD and DLF, where MC 2 DLF not fixed
 - `RNN_DeadLayerFit_MC2DLF1.ipynb`: Training where MC2 has a fixed DLF=1 and a quantile regression loss fucntion is used on DLF Label
 - `RNN_DeadLayerFit_FCCDonly.ipynb`: Training where all training data has DLF=1.0, and only FCCD label is used
@@ -41,7 +41,7 @@ Different versions of the RNN (i.e. with different training parameters or traine
 are saved as pytorch pkl files in `saved_models/<RNN_ID>/`. 
 In this folder we also save the results for each RNN - i.e. plots and json files with performance metrics 
 (e.g. accuracy, recall and precision).
-These are excluded from the github (they are in the .gitignore) with the exception of RNN_ID = `RNN_MC2DLF1_20epochs_LR0.005_fulldataset_10000trials`.
+These are excluded from the github (they are in the .gitignore) with the exception of RNN_ID = `RNN_MC2DLF1_20epochs_LR0.005_fulldataset_10000trials` and `RNN_MC2DLF1_20epochs_LR0.005_maxFCCDdiff0.05mm_10000trials/`.
 
 
 

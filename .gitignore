@@ -8,4 +8,4 @@ data/V05268A_data/old/
 !saved_models/
 saved_models/*
 !saved_models/RNN_MC2DLF1_20epochs_LR0.005_fulldataset_10000trials/
-
+!saved_models/RNN_MC2DLF1_20epochs_LR0.005_maxFCCDdiff0.05mm_10000trials/

@@ -1,0 +1,18 @@
+{
+    "accuracy_FCCD": 0.9253333333333333,
+    "precision_FCCD": 0.9037365421152628,
+    "recall_FCCD": 0.951967978652435,
+    "accuracy_DLF": 0.9836666666666667,
+    "decision_thresholds": [
+        0.5,
+        0.5
+    ],
+    "roc_auc_FCCD": 0.9817128807612804,
+    "RMSEmisclassified": {
+        "RMSE_FCCDmisclassified_FCCD": 0.01185037672698335,
+        "RMSE_DLFmisclassified_FCCD": 0.027259598571617208,
+        "totalTrials": 3000,
+        "NoMisclassifiedFCCD": 224,
+        "NoMisclassifiedDLF": 49
+    }
+}
