@@ -76,8 +76,8 @@ class DL_Dataset(Dataset):
         
         
         self.size = size #this is the no. pairs of MC spectra to sample 
-        self.hist_length = 900 #Energy Spectrum # of bins #binning: 0.5 keV bins from 0-450 keV:
-        self.energy_bin = np.linspace(0,450.0,self.hist_length+1) # Only look at events between 0 and 450 keV
+        self.hist_length = 890 #old value=900 # of bins #binning: 0.5 keV bins from 5-450 keV:
+        self.energy_bin = np.linspace(5,450.0,self.hist_length+1) # Only look at events between 5 and 450 keV
         self.restrict_dataset = restrict_dataset
         self.restrict_dict = restrict_dict
         
@@ -166,7 +166,8 @@ class DL_Dataset(Dataset):
         "This gets the energy spectrum of each file"
         df =  pd.read_hdf(h5_address, key="energy_hist")
         counts = df[0].to_numpy()
-        bins = self.energy_bin #size 901, 0-450keV 0.5keV width
+        counts = counts[10:] #remove first 10 bins (5 keV) due to trigger
+        bins = self.energy_bin #size 891, 5-450keV, 0.5keV width
           
         if MC == True: #data doesnt need normalising, only MC
             counts = self.normalise_MC_counts(counts) 

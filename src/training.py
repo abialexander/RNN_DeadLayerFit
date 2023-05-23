@@ -869,7 +869,7 @@ def plot_attention(spectrum, attscore, labels, ax= None, fig=None):
     plt.subplot(gs[0])
     rescale = lambda y: (y - np.min(y)) / (np.max(y) - np.min(y))
     len_spectrum = len(spectrum)
-    plt.bar(np.linspace(0,450,len_spectrum), spectrum, width=1.5, color=colormap_normal(rescale(attscore)))
+    plt.bar(np.linspace(5,450+0.5,len_spectrum), spectrum, width=1.5, color=colormap_normal(rescale(attscore)))
     plt.xlabel("Energy / keV")
     plt.ylabel("Counts")
     plt.yscale("log")
@@ -985,7 +985,8 @@ def plot_average_attention(dataset, test_loader, RNN_path, attention_mechanism="
     
     fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(8,6))
     binwidth = 0.5 #keV
-    bins = np.arange(0,450+binwidth,binwidth)
+#     bins = np.arange(0,450+binwidth,binwidth)
+    bins = np.arange(5,450+binwidth,binwidth)
     bins_centres = np.delete(bins+binwidth/2,-1)
     
     ax1.plot(bins_centres, average_attention)
@@ -1048,7 +1049,7 @@ def test_RNN_RealData(RNN_ID, dataset, spectrum_diff, spectrum_data, spectrum_MC
     #Plot 2
     fig1, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(8,6))
     binwidth = 0.5 #keV
-    bins = np.arange(0,450+binwidth,binwidth)
+    bins = np.arange(5,450+binwidth,binwidth)
     bins_centres = np.delete(bins+binwidth/2,-1)
     ax1.plot(bins_centres, attention, label="attention")
     ax2.plot(bins_centres, spectrum_data, label="Data")

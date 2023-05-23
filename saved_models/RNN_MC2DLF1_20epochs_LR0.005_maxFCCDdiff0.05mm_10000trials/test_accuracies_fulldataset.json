@@ -1,18 +1,18 @@
 {
-    "accuracy_FCCD": 0.7506666666666667,
-    "precision_FCCD": 0.6764418377321603,
-    "recall_FCCD": 0.9414965986394558,
-    "accuracy_DLF": 0.482,
+    "accuracy_FCCD": 0.7176666666666667,
+    "precision_FCCD": 0.6558279139569785,
+    "recall_FCCD": 0.8918367346938776,
+    "accuracy_DLF": 0.5963333333333334,
     "decision_thresholds": [
         0.5,
         0.5
     ],
-    "roc_auc_FCCD": 0.7141345427059712,
+    "roc_auc_FCCD": 0.689442665955271,
     "RMSEmisclassified": {
-        "RMSE_FCCDmisclassified_FCCD": 1.1193805911339927,
-        "RMSE_DLFmisclassified_FCCD": 0.9649494508936325,
+        "RMSE_FCCDmisclassified_FCCD": 1.0016934880797583,
+        "RMSE_DLFmisclassified_FCCD": 0.9248284046252319,
         "totalTrials": 3000,
-        "NoMisclassifiedFCCD": 748,
-        "NoMisclassifiedDLF": 1554
+        "NoMisclassifiedFCCD": 847,
+        "NoMisclassifiedDLF": 1211
     }
 }

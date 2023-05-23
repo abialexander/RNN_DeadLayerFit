@@ -68,7 +68,7 @@ def plotMultipleSpectra(spectra_list, label_list):
     "Plot multiple spectra on same hist"
     
     binwidth = 0.5 #keV
-    bins = np.arange(0,450+binwidth,binwidth)
+    bins = np.arange(5,450+binwidth,binwidth)
     bins_centres = np.delete(bins+binwidth/2,-1)
     
     plt.figure()
@@ -87,7 +87,7 @@ def plotSpectrumDiff(spectrum_diff):
     "Plot spectrum difference"
     
     binwidth = 0.5 #keV
-    bins = np.arange(0,450+binwidth,binwidth)
+    bins = np.arange(5,450+binwidth,binwidth)
     bins_centres = np.delete(bins+binwidth/2,-1)
     plt.figure()
     plt.plot(bins_centres, spectrum_diff)
