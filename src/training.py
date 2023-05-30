@@ -275,7 +275,7 @@ def train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE,
         else:
             training_results(NUM_EPOCHS, loss_values, FCCD_accuracy_values, DLF_accuracy_values, save_plots = True, RNN_ID = RNN_ID)
     
-    if RegressionDLF==True:
+    if quantileRegressionDLF==True:
         return FCCD_accuracy_values, DLF_accuracy_values, TotalLoss_values
     else:
         return FCCD_accuracy_values, DLF_accuracy_values, loss_values
@@ -1010,10 +1010,16 @@ def plot_average_attention(dataset, test_loader, RNN_path, attention_mechanism="
     return average_attention
     
 
-def test_RNN_RealData(RNN_ID, dataset, spectrum_diff, spectrum_data, spectrum_MCBest, labels_MCBest):
+def test_RNN_spectrumdiff(RNN_ID, spectrum_diff, spectrum1, spectrum2, labels, dataset_histlen=890):
     """
-    Feed DATA-MCBest to an RNN, return RNN outputs and plot attention.
+    Feed a single spectrumdiff to an RNN, return RNN outputs and plot attention.
     Currently only for quantileRegressionDLF.
+    args:
+    - RNN_ID
+    - spectrum_diff
+    - spectrum1
+    - spectrum2
+    - labels = {"FCCD1": "Data", "FCCD2": 1.7, "DLF1": "Data", "DLF2": 1.0, "spectrum1": "Data", "spectrum2":"MCBest"}
     """
     
     DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -1021,8 +1027,11 @@ def test_RNN_RealData(RNN_ID, dataset, spectrum_diff, spectrum_data, spectrum_MC
     
     RNN_path = CodePath+"/saved_models/"+RNN_ID+"/"+RNN_ID+".pkl"
     
+    if isinstance(spectrum_diff,np.ndarray):
+        spectrum_diff = torch.from_numpy(spectrum_diff)
+    
     #Get RNN outputs
-    RNNclassifier = RNN(dataset.get_histlen(),4)
+    RNNclassifier = RNN(dataset_histlen,4)
     RNNclassifier.eval()
     RNNclassifier.to(DEVICE)
     with torch.no_grad():
@@ -1034,7 +1043,7 @@ def test_RNN_RealData(RNN_ID, dataset, spectrum_diff, spectrum_data, spectrum_MC
     print(outputs)
     
     #Get RNN Attention Score
-    RNNinterpretor = RNN(dataset.get_histlen(),4, get_attention = True, attention_mechanism="normal")
+    RNNinterpretor = RNN(dataset_histlen,4, get_attention = True, attention_mechanism="normal")
     RNNinterpretor.load_state_dict(torch.load(RNN_path))
     RNNinterpretor.eval()
     RNNinterpretor.to(DEVICE)
@@ -1043,8 +1052,8 @@ def test_RNN_RealData(RNN_ID, dataset, spectrum_diff, spectrum_data, spectrum_MC
     attention = attention_score[0].cpu().detach().numpy()
     
     #plot 1
-    labels = {"FCCD1": "Data", "FCCD2": labels_MCBest["FCCD"], "DLF1": "Data", "DLF2": labels_MCBest["DLF"]}
-    fig,ax = plot_attention(spectrum_data, attention, labels)
+#     labels = {"FCCD1": "Data", "FCCD2": labels_MCBest["FCCD"], "DLF1": "Data", "DLF2": labels_MCBest["DLF"]}
+    fig, ax = plot_attention(spectrum1, attention, labels)
     
     #Plot 2
     fig1, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(8,6))
@@ -1052,8 +1061,9 @@ def test_RNN_RealData(RNN_ID, dataset, spectrum_diff, spectrum_data, spectrum_MC
     bins = np.arange(5,450+binwidth,binwidth)
     bins_centres = np.delete(bins+binwidth/2,-1)
     ax1.plot(bins_centres, attention, label="attention")
-    ax2.plot(bins_centres, spectrum_data, label="Data")
-    ax2.plot(bins_centres, spectrum_MCBest, label="MCBest- FCCD: "+str(labels_MCBest["FCCD"])+"mm, DLF: "+str(labels_MCBest["DLF"]))
+    ax2.plot(bins_centres, spectrum1, label=labels["spectrum1"]+"- FCCD: "+labels["FCCD1"]+", DLF: "+labels["DLF1"])
+    ax2.plot(bins_centres, spectrum2, label=labels["spectrum2"]+"- FCCD: "+labels["FCCD2"]+", DLF: "+labels["DLF2"])
+#     ax2.plot(bins_centres, spectrum_MCBest, label="MCBest- FCCD: "+str(labels_MCBest["FCCD"])+"mm, DLF: "+str(labels_MCBest["DLF"]))
     
     ax1.set_ylabel("Attention")
     ax1.set_yscale("log")

@@ -3,7 +3,7 @@ from src.RNN import *
 from src.training import *
 from tabulate import tabulate
 
-def compareRNNs(maxFCCDdiff_list, NUM_EPOCHS_list,LEARNING_RATE = 0.005, dataset_size = 10000):
+def compareRNNs(maxFCCDdiff_list, NUM_EPOCHS_list,LEARNING_RATE = 0.005, dataset_size = 10000, RNN_ID_start="RNN_MC2DLF1"):
     """
     Compare the performance metrics of saved RNN models and output tables.
     Currently only for quantileRegressionDLF=True
@@ -22,9 +22,9 @@ def compareRNNs(maxFCCDdiff_list, NUM_EPOCHS_list,LEARNING_RATE = 0.005, dataset
     for ind, maxFCCDdiff in enumerate(maxFCCDdiff_list):
         NUM_EPOCHS = NUM_EPOCHS_list[ind]
         if maxFCCDdiff == "NA":
-            RNN_ID ="RNN_MC2DLF1_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_fulldataset_"+str(dataset_size)+"trials"
+            RNN_ID =RNN_ID_start+"_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_fulldataset_"+str(dataset_size)+"trials"
         else:
-            RNN_ID ="RNN_MC2DLF1_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+            RNN_ID =RNN_ID_start+"_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
 
         #Restricted Dataset
         accuracies_path = CodePath+"/saved_models/"+RNN_ID+"/test_accuracies.json"
@@ -97,7 +97,7 @@ def plotSpectrumDiff(spectrum_diff):
     plt.xlabel("Energy / keV")
     plt.tight_layout()
     plt.hlines(0,0,450)
-    plt.ylim(-10,10)
+#     plt.ylim(-10,10)
     plt.show()    
     
     
