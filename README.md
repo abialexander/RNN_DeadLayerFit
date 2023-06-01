@@ -31,10 +31,18 @@ Functions and classes: `src/`
 - `src/RNN.py`: Classes and functions for the RNN
 - `src/training.py`: Classes and functions for training and evaluating of the RNN
 
-The workflow is controlled by jupyter notebooks that use the functions and classes from `/src/`
-- `RNN_DeadLayerFit.ipynb`: Original notebook,  for fitting FCCD and DLF, where MC 2 DLF not fixed
-- `RNN_DeadLayerFit_MC2DLF1.ipynb`: Training where MC2 has a fixed DLF=1 and a quantile regression loss fucntion is used on DLF Label
-- `RNN_DeadLayerFit_FCCDonly.ipynb`: Training where all training data has DLF=1.0, and only FCCD label is used
+The workflow is controlled by python scripts and jupyter notebooks that use the functions and classes from `/src/`
+
+Training:
+- `runRNNtraining.py`: Python script that runs training
+Training/Testing evaluation:
+<!-- - `RNNtraining.ipynb`: Original notebook,  for fitting FCCD and DLF, where MC 2 DLF not fixed -->
+- `RNNtraining_MC2DLF1.ipynb`: Training where MC2 has a fixed DLF=1 and a quantile regression loss fucntion is used on DLF Label
+<!-- - `RNNtraining_FCCDonly.ipynb`: Training where all training data has DLF=1.0, and only FCCD label is used
+ -->
+Final Results on real data:
+- `RNNperformance_RealData.ipynb`: Notebook that compares different RNN performance and tests it on real data
+
 
 ## Results
 Different versions of the RNN (i.e. with different training parameters or trained with different restrictions of training data) 

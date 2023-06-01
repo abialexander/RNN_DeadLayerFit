@@ -98,7 +98,44 @@ def plotSpectrumDiff(spectrum_diff):
     plt.tight_layout()
     plt.hlines(0,0,450)
 #     plt.ylim(-10,10)
-    plt.show()    
+    plt.show() 
+
+def find_hist_quantile(counts, bins, q):
+    "find quantile bin of a histogram"
+    pdf = counts/sum(counts) #convert hist counts to a pdf normalised to 1
+    cs = np.cumsum(pdf)
+    bin_idx = np.where(cs > q)[0][0]
+    bin_quantile = bins[bin_idx]
+    print(bin_quantile)
+    return bin_quantile
+
+def plot_FCCD_pdf(RNN_ID):
+    "plot the pdf of RNN FCCD output on test training data, with quantiles"
+    
+    #open hist
+    CodePath = os.path.dirname(os.path.abspath("__file__"))
+    df = pd.read_csv(CodePath+"/saved_models/"+RNN_ID+"/FCCD_test_classification_hist.csv")
+    bins_centres, counts0, counts1 = df.bins_centres, df.counts0, df.counts1
+    bins = np.linspace(0,1,201) 
+    
+    #compute 10% and 90% quantiles for exclusion region
+    pdf1_q10 = find_hist_quantile(counts1, bins, 0.1)
+    pdf0_q90 = find_hist_quantile(counts0, bins, 0.9)
+    
+    #plot
+    fig, ax = plt.figure()
+    plt.step(bins_centres, counts0/sum(counts0), linestyle='-',linewidth=1, label = "FCCD truth label = 0", color="blue")
+    plt.step(bins_centres, counts1/sum(counts1), linestyle='-',linewidth=1, label = "FCCD truth label = 1", color="orange")
+    plt.vlines(pdf1_q10, min(counts1), 1/2, ls="-.", color="orange")
+    plt.vlines(pdf0_q90, min(counts1), 1/2, ls="-.", color="blue")
+    # plt.Rectangle( [pdf0_q90,min(counts1)], pdf1_q10-pdf0_q90, 1/2, color="grey") #, angle=0.0 ÷, rotation_point='xy')
+    plt.legend(loc="upper left", title="RNN output region of uncertainty: "+ str(pdf0_q90)+" - "+str(pdf1_q10), title_fontsize=9, fontsize=9)
+    plt.xlabel("RNN Output FCCD")
+    plt.ylabel("PDF")
+    plt.ylim(0.5*10**(-3), 2)
+    plt.yscale("log")
+    plt.savefig(CodePath+"/saved_models/"+RNN_ID+"/plots/FCCD_test_classification_pdf.png")
+
     
     
     

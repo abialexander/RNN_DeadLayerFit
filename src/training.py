@@ -549,12 +549,20 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, misclassified_trials_plots
     else:
         fig, (ax_FCCD, ax_DLF) = plt.subplots(1, 2, figsize=(12,4))
     bins = np.linspace(0,1,201)  
-    counts, bins, bars = ax_FCCD.hist(np.array(FCCD_RNNoutputs_1), bins=bins, label = "label = 1", histtype="step")
-    ax_FCCD.hist(np.array(FCCD_RNNoutputs_0), bins=bins, label = "label = 0", histtype="step")
+    counts1, bins, bars = ax_FCCD.hist(np.array(FCCD_RNNoutputs_1), bins=bins, label = "label = 1", histtype="step")
+    counts=counts1
+    counts0, bins, bars = ax_FCCD.hist(np.array(FCCD_RNNoutputs_0), bins=bins, label = "label = 0", histtype="step")
     ax_FCCD.vlines(FCCD_RNNoutput_cut, min(counts), 2*max(counts), linestyles="dashed", color="gray", label ="cut")
     ax_FCCD.legend()
     ax_FCCD.set_xlabel("FCCD RNNoutput")
     ax_FCCD.set_yscale("log")
+    
+    #save this histo to df
+    if train_restricted_test_fulldataset == False and save_results == True:
+        binwidth = bins[1]-bins[0]
+        bins_centres = np.delete(bins+binwidth/2,-1)
+        df = pd.DataFrame({"counts0": counts0, "counts1": counts1, "bins_centres": bins_centres})
+        df.to_csv(CodePath+"/saved_models/"+RNN_ID+"/FCCD_test_classification_hist.csv")
 
     if FCCDonly == False:
         # fig_DLF, ax_DLF = plt.subplots()
@@ -581,9 +589,9 @@ def test_RNN(RNNclassifier, test_loader, RNN_ID=None, misclassified_trials_plots
             ax_DLF.set_yscale("log")
     if save_results == True:
         if train_restricted_test_fulldataset == True:
-            fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_RNN_performance_fulldataset"
+            fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_RNN_performance_fulldataset.png"
         else:
-            fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_RNN_performance"
+            fn = CodePath+"/saved_models/"+RNN_ID+"/plots/test_RNN_performance.png"
         plt.savefig(fn)
         # fig_FCCD.savefig(fn+"_FCCD.png")
         # fig_DLF.savefig(fn+"_DLF.png")
@@ -1007,10 +1015,20 @@ def plot_average_attention(dataset, test_loader, RNN_path, attention_mechanism="
     else:
         plt.savefig(CodePath+"/saved_models/"+RNN_ID+"/plots/average_attention.pdf")
     
+    
+    #save average attention hist
+    if train_restricted_test_fulldataset == False:
+        df = pd.DataFrame({"bin_centres":bins_centres, "average_attention":average_attention})
+        df.to_csv(CodePath+"/saved_models/"+RNN_ID+"/average_attention_hist.csv")
+        print("saved average attention to csv file")
+        
+        
+    
     return average_attention
     
 
-def test_RNN_spectrumdiff(RNN_ID, spectrum_diff, spectrum1, spectrum2, labels, dataset_histlen=890):
+def test_RNN_spectrumdiff(RNN_ID, spectrum_diff, spectrum1, spectrum2, labels, dataset_histlen=890, save_results = False,
+                         plot_results=True):
     """
     Feed a single spectrumdiff to an RNN, return RNN outputs and plot attention.
     Currently only for quantileRegressionDLF.
@@ -1032,6 +1050,7 @@ def test_RNN_spectrumdiff(RNN_ID, spectrum_diff, spectrum1, spectrum2, labels, d
     
     #Get RNN outputs
     RNNclassifier = RNN(dataset_histlen,4)
+    RNNclassifier.load_state_dict(torch.load(RNN_path))
     RNNclassifier.eval()
     RNNclassifier.to(DEVICE)
     with torch.no_grad():
@@ -1039,8 +1058,8 @@ def test_RNN_spectrumdiff(RNN_ID, spectrum_diff, spectrum1, spectrum2, labels, d
         outputs = RNNclassifier(spectrum_diff)
         outputs = outputs.cpu().data.numpy()
     
-    print("RNN Outputs: ")
-    print(outputs)
+#     print("RNN Outputs: ")
+#     print(outputs)
     
     #Get RNN Attention Score
     RNNinterpretor = RNN(dataset_histlen,4, get_attention = True, attention_mechanism="normal")
@@ -1051,32 +1070,42 @@ def test_RNN_spectrumdiff(RNN_ID, spectrum_diff, spectrum1, spectrum2, labels, d
     attention_score = RNNinterpretor(spectrum_diff)
     attention = attention_score[0].cpu().detach().numpy()
     
-    #plot 1
-#     labels = {"FCCD1": "Data", "FCCD2": labels_MCBest["FCCD"], "DLF1": "Data", "DLF2": labels_MCBest["DLF"]}
-    fig, ax = plot_attention(spectrum1, attention, labels)
     
-    #Plot 2
-    fig1, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(8,6))
-    binwidth = 0.5 #keV
-    bins = np.arange(5,450+binwidth,binwidth)
-    bins_centres = np.delete(bins+binwidth/2,-1)
-    ax1.plot(bins_centres, attention, label="attention")
-    ax2.plot(bins_centres, spectrum1, label=labels["spectrum1"]+"- FCCD: "+labels["FCCD1"]+", DLF: "+labels["DLF1"])
-    ax2.plot(bins_centres, spectrum2, label=labels["spectrum2"]+"- FCCD: "+labels["FCCD2"]+", DLF: "+labels["DLF2"])
-#     ax2.plot(bins_centres, spectrum_MCBest, label="MCBest- FCCD: "+str(labels_MCBest["FCCD"])+"mm, DLF: "+str(labels_MCBest["DLF"]))
+    if plot_results == True:
+        #plot 1
+        fig, ax = plot_attention(spectrum1, attention, labels)
+
+        #Plot 2
+        fig1, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(8,6))
+        binwidth = 0.5 #keV
+        bins = np.arange(5,450+binwidth,binwidth)
+        bins_centres = np.delete(bins+binwidth/2,-1)
+        ax1.plot(bins_centres, attention, label="attention")
+        ax2.plot(bins_centres, spectrum1, label=labels["spectrum1"]+"- FCCD: "+labels["FCCD1"]+", DLF: "+labels["DLF1"])
+        ax2.plot(bins_centres, spectrum2, label=labels["spectrum2"]+"- FCCD: "+labels["FCCD2"]+", DLF: "+labels["DLF2"])
+
+        ax1.set_ylabel("Attention")
+        ax1.set_yscale("log")
+        ax1.set_xlim(0,450)
+        ax2.set_ylabel("Counts / "+str(binwidth)+" keV")
+        ax2.set_yscale("log")
+        ax2.set_xlabel("Energy / keV")
+        ax2.set_xlim(0,450)
+        ax2.legend()
+        plt.tight_layout()
+        plt.subplots_adjust(wspace=0, hspace=0)
+        plt.show()
     
-    ax1.set_ylabel("Attention")
-    ax1.set_yscale("log")
-    ax1.set_xlim(0,450)
-    ax2.set_ylabel("Counts / "+str(binwidth)+" keV")
-    ax2.set_yscale("log")
-    ax2.set_xlabel("Energy / keV")
-    ax2.set_xlim(0,450)
-    ax2.legend()
-    plt.tight_layout()
-    plt.subplots_adjust(wspace=0, hspace=0)
-    
-    plt.show()
+    if save_results == True:
+        fig.savefig(CodePath+"/saved_models/"+RNN_ID+"/plots/attention_realdata_colour.png")
+        fig1.savefig(CodePath+"/saved_models/"+RNN_ID+"/plots/attention_realdata.png")
+        
+        #save RNN outputs to json file
+        fn = CodePath+"/saved_models/"+RNN_ID+"/RNNoutput_realdata.json"
+        
+        dict_ = {"RNNoutputs": outputs[0].tolist()}
+        with open(fn, "w") as outfile:
+            json.dump(dict_, outfile, indent=4)
     
     return outputs
 

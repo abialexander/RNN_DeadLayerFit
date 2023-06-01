@@ -378,25 +378,12 @@ def load_two_spectra(address1, address2, dataset, MC1=False, MC2=True):
     
     df2 =  pd.read_hdf(address2, key="energy_hist")
     counts2 = df2[0].to_numpy()
-    counts2 = counts2[10:] #remove first 10 bins (5 keV) due to trigger
+    counts2 = counts2[10:]
     if MC2==True:
-        counts2 = normalise_MC_counts(counts2)
-    
-    # #build scalers
-    # hist_array1 = [counts1.reshape(1,-1)]
-    # hist_array1 = np.concatenate(hist_array1,axis=0)
-    # print(hist_array1.shape)
-    # scaler1 = StandardScaler()
-    # scaler1.fit(hist_array1)
-    # hist_array2 = [counts2.reshape(1,-1)]
-    # hist_array2 = np.concatenate(hist_array2,axis=0)
-    # print(hist_array2.shape)
-    # scaler2 = StandardScaler()
-    # scaler2.fit(hist_array2)   
+        counts2 = normalise_MC_counts(counts2)  
 
-    #get dataset scalers
+    #get dataset scaler
     scaler = dataset.scaler
-#     scaler_MC2 = dataset.scaler_MC2
 
     #apply scalers
     spectrum1 = scaler.transform(counts1.reshape(1,-1))
