@@ -72,10 +72,7 @@ class DL_Dataset(Dataset):
     CodePath = os.path.dirname(os.path.abspath("__file__"))
 
     def __init__(self, path, restrict_dataset = False, restrict_dict = None, size=1000, path_MC2 = None,
-                normaliseSpectraUnity = False, ratioSpectraRNNInput = False):
-        
-        # path_data=None, path_MCBest=None, return_data_MCBest=False
-        
+                normaliseSpectraUnity = False, ratioSpectraRNNInput = False, separate_scalers=False):
         
         self.size = size #this is the no. pairs of MC spectra to sample 
         self.hist_length = 890 #old value=900 # of bins #binning: 0.5 keV bins from 5-450 keV:
@@ -83,13 +80,9 @@ class DL_Dataset(Dataset):
         self.restrict_dataset = restrict_dataset
         self.restrict_dict = restrict_dict
         
-        # #For when returning data-MCbest instead of MC Training data
-        # self.path_data = path_data
-        # self.path_MCBest = path_MCBest
-        # self.return_data_MCBest = return_data_MCBest #Boolean
-        
         self.normaliseSpectraUnity = normaliseSpectraUnity #True if all histograms are normalised to 1
         self.ratioSpectraRNNInput = ratioSpectraRNNInput #True if input to RNN is the ratio not the difference of 2 spectra
+        self.separate_scalers = separate_scalers #True if separate scalers for MC1 and MC2
         
         #---------------------------------
         #MC1 (and MC2 if pathMC2 = None)
@@ -136,8 +129,9 @@ class DL_Dataset(Dataset):
             
             self.event_list_MC2 = list(self.event_dict_MC2.keys()) #list of [FCCD, DLF]
             self.data_size_MC2 = len(self.event_list_MC2) #this is the no. MC spectra
-#             self.scaler_MC2 = self.build_scaler(MC2=True) #performs a ~normalisation on each bin so that they are all significant
-   
+            if self.separate_scalers == True:
+                self.scaler_MC2 = self.build_scaler(MC2=True)
+                
         
     def __len__(self):
         return self.size
@@ -176,42 +170,15 @@ class DL_Dataset(Dataset):
         bins = self.energy_bin #size 891, 5-450keV, 0.5keV width
          
         if self.normaliseSpectraUnity == True:
-            counts = normalise_counts_to_unity(counts)
-        
+            counts = normalise_counts_to_unity(counts, unity=10**3)
         elif MC == True: #for normaliseSpectraUnity False, data doesnt need normalising, only MC
             counts = normalise_MC_counts(counts) 
         
         return counts
-    
-#     def normalise_counts_to_unity(self, counts):
-#         "Normalise all histograms to unity"
-#         total_counts = sum(counts)
-#         counts_normalised = counts/total_counts #normalise all spectra to 1
-#         return counts_normalised
-    
-    
-#     def normalise_MC_counts(self, counts):
-#         "Normalises MC histograms to data histogram"
-#         #normalise MC to data`
-#         data_time = 30*60 #30 mins, 30*60s
-#         Ba133_activity = 116.1*10**3 #Bq
-#         data_evts = data_time*Ba133_activity
-#         MC_evts = 10**8
-#         MC_solidangle_fraction = 1/6 #30 degrees solid angle in MC
-#         scaling = MC_evts/MC_solidangle_fraction/data_evts
-        
-#         counts_normalised = counts/scaling
-        
-#         return counts_normalised
         
 
     def __getitem__(self, idx):
         
-        #OLD: 1st spectra read idx, 2nd spectra is random, then compute difference
-        #NEW: both spectra random
-        
-        # if self.return_data_MCBest == False:
-
         #1st spectrum
         idx = np.random.randint(self.data_size)
         FCCD, DLF = self.event_list[idx][0], self.event_list[idx][1]
@@ -246,12 +213,15 @@ class DL_Dataset(Dataset):
 
         if self.path_MC2 is None:
             dead_layer_address2 = self.event_dict[(FCCD2, DLF2)]
-            spectrum2 = self.scaler.transform(self.get_hist_magnitude(dead_layer_address2).reshape(1,-1))
         else:
             dead_layer_address2 = self.event_dict_MC2[(FCCD2, DLF2)]
-#             spectrum2 = self.scaler_MC2.transform(self.get_hist_magnitude(dead_layer_address2).reshape(1,-1))     
-            spectrum2 = self.scaler.transform(self.get_hist_magnitude(dead_layer_address2).reshape(1,-1))     
+#                
 
+        if self.separate_scalers == True:
+            spectrum2 = self.scaler_MC2.transform(self.get_hist_magnitude(dead_layer_address2).reshape(1,-1))    
+        else:
+            spectrum2 = self.scaler.transform(self.get_hist_magnitude(dead_layer_address2).reshape(1,-1))
+    
         #compute difference and make binary label
         if FCCD_diff >=0:
             FCCD_diff_label = 1
@@ -275,33 +245,17 @@ class DL_Dataset(Dataset):
 
         return spectrum_diff, FCCD_diff_label, DLF_diff_label, extras, spectrum_original
         
-        # else:
-        #     spectrum_diff, spectrum_data, spectrum_MCBest = self.get_data_MCBest_spectrum_diff()
-        #     return spectrum_diff, spectrum_data, spectrum_MCBest
-            
     
     def get_hist_range(self):
         return self.energy_bin
     
     def get_scaler(self):
         return self.scaler
-    
-    # def get_data_MCBest_spectrum_diff(self):
-    #     spectrum_data = self.get_hist_magnitude(self.path_data, MC=False)
-    #     spectrum_MCBest = self.get_hist_magnitude(self.path_MCBest, MC=True)
-    #     data = self.scaler.transform(spectrum_data.reshape(1,-1))
-    #     MCBest = self.scaler.transform(spectrum_MCBest.reshape(1,-1))
-    #     if self.ratioSpectraRNNInput == True:
-    #         spectrum_diff = data/MCBest
-    #     else:
-    #         spectrum_diff = data - MCBest
-    #     return spectrum_diff, spectrum_data, spectrum_MCBest
 
-     
-def normalise_counts_to_unity(counts):
-    "Normalise all histograms to unity"
+def normalise_counts_to_unity(counts, unity=1):
+    "Normalise all histograms to unity or another number i.e. unity=10000"
     total_counts = sum(counts)
-    counts_normalised = counts/total_counts #normalise all spectra to 1
+    counts_normalised = unity*counts/total_counts #normalise all spectra to 1
     return counts_normalised    
 
 def normalise_MC_counts(counts):
@@ -321,26 +275,21 @@ def normalise_MC_counts(counts):
 
 #Load dataset
 def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1000, path = None, path_MC2 = None,
-              normaliseSpectraUnity = False, ratioSpectraRNNInput = False):
+              normaliseSpectraUnity = False, ratioSpectraRNNInput = False, separate_scalers=False):
     
-    # path_data=None, path_MCBest=None, return_data_MCBest=False
     "function to load the dataset"
     
     if restrict_dataset == True and restrict_dict is None:
         print("You must use kwarg restrict_dict in order to restrict dataset")
         return 0
-    # if return_data_MCBest==True and (path_data == None or path_MCBest==None):
-    #     print("You must set path_data and path_MCBest in order to return_data_MCBest")
-    #     return 0
 
     CodePath = os.path.dirname(os.path.abspath("__file__"))
     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
     if path is None:
         path = MC_PATH
-#     dataset = DL_Dataset(restrict_dataset = restrict_dataset, restrict_dict=restrict_dict, size=size, path=path, path_MC2 = path_MC2)
     
     dataset = DL_Dataset(path, restrict_dataset = restrict_dataset, restrict_dict=restrict_dict, size=size, 
-                         path_MC2 = path_MC2,normaliseSpectraUnity=normaliseSpectraUnity, ratioSpectraRNNInput=ratioSpectraRNNInput)
+                         path_MC2 = path_MC2,normaliseSpectraUnity=normaliseSpectraUnity, ratioSpectraRNNInput=ratioSpectraRNNInput, separate_scalers=separate_scalers)
     
     validation_split = .3 #Split data set into training & testing with 7:3 ratio
     shuffle_dataset = True
@@ -366,28 +315,35 @@ def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1
         
 
     
-def load_two_spectra(address1, address2, dataset, MC1=False, MC2=True):
+def load_two_spectra(address1, address2, dataset, MC1=False, MC2=True, separate_scalers=False, norm1=False):
     "function to load 2 spectra and return spectrum_diff without running entire dataset"
     
     #get normalised specrta counts
     df1 =  pd.read_hdf(address1, key="energy_hist")
     counts1 = df1[0].to_numpy()
     counts1 = counts1[10:] #remove first 10 bins (5 keV) due to trigger
-    if MC1==True:
+    if MC1==True and norm1==False:
         counts1 = normalise_MC_counts(counts1)
+    elif norm1 == True:
+        counts1 = normalise_counts_to_unity(counts1, unity=10**3)
     
     df2 =  pd.read_hdf(address2, key="energy_hist")
     counts2 = df2[0].to_numpy()
     counts2 = counts2[10:]
-    if MC2==True:
-        counts2 = normalise_MC_counts(counts2)  
+    if MC2==True and norm1==False:
+        counts2 = normalise_MC_counts(counts2)
+    elif norm1 == True:
+        counts2 = normalise_counts_to_unity(counts2, unity=10**3)
 
-    #get dataset scaler
+    #get dataset scaler(s) and apply
     scaler = dataset.scaler
-
-    #apply scalers
     spectrum1 = scaler.transform(counts1.reshape(1,-1))
-    spectrum2 = scaler.transform(counts2.reshape(1,-1))
+    
+    if separate_scalers == True:
+        scaler_MC2 = dataset.scaler_MC2
+        spectrum2 = scaler_MC2.transform(counts2.reshape(1,-1))
+    else:
+        spectrum2 = scaler.transform(counts2.reshape(1,-1))
 
     spectrum_diff = spectrum1 - spectrum2
 

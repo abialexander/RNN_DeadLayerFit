@@ -335,29 +335,29 @@ def main():
 #     #run training
 #     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
 
-    #=================TRAINING 15 MC2 DLF=1, Quantile Regression, restriction max FCCD 0.01===================
-    MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
-    MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+#     #=================TRAINING 15 MC2 DLF=1, Quantile Regression, restriction max FCCD 0.01===================
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+#     MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
     
-    NUM_EPOCHS = 20 #can try increasing
-    LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
-    dataset_size = 10000 #10000
+#     NUM_EPOCHS = 20 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000 #10000
 
-    maxFCCDdiff = 0.01
-    maxDLFdiff = 1.0 #i.e. no restriction
-    RNN_ID ="RNN_MC2DLF1_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+#     maxFCCDdiff = 0.01
+#     maxDLFdiff = 1.0 #i.e. no restriction
+#     RNN_ID ="RNN_MC2DLF1_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
 
-    #initialise directories to save
-    if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
-        os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
     
-    #load dataset
-    BATCH_SIZE = 4 
-    restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
-    train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, restrict_dataset=True, restrict_dict = restrict_dict)
+#     #load dataset
+#     BATCH_SIZE = 4 
+#     restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, restrict_dataset=True, restrict_dict = restrict_dict)
 
-    #run training
-    FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
+#     #run training
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
 
 
 #     # All norm1_ratioInput
@@ -499,5 +499,290 @@ def main():
 #     #run training
 #     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
 
+
+
+
+#     # All norm1, separate scalers
+# #     #=================TRAINING 22 MC2 DLF=1, Quantile Regression, no restriction, ===================    
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+#     MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+    
+#     NUM_EPOCHS = 20 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000 #10000
+#     RNN_ID = "RNN_MC2DLF1_norm1_2scalers_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_fulldataset_"+str(dataset_size)+"trials"
+
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+#     #load dataset
+#     BATCH_SIZE = 4 
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, normaliseSpectraUnity = True, separate_scalers=True)
+
+#     #run training
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
+
+#     #=================TRAINING 23 MC2 DLF=1, Quantile Regression, restriction max FCCD 0.5===================
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+#     MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+    
+#     NUM_EPOCHS = 20 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000 #10000
+
+#     maxFCCDdiff = 0.5
+#     maxDLFdiff = 1.0 #i.e. no restriction
+#     RNN_ID ="RNN_MC2DLF1_norm1_2scalers_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+#     #load dataset
+#     BATCH_SIZE = 4 
+#     restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, restrict_dataset=True, restrict_dict = restrict_dict, normaliseSpectraUnity = True, separate_scalers = True)
+
+#     #run training
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
+#     #=================TRAINING 24 MC2 DLF=1, Quantile Regression, restriction max FCCD 0.25===================
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+#     MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+    
+#     NUM_EPOCHS = 20 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000 #10000
+
+#     maxFCCDdiff = 0.25
+#     maxDLFdiff = 1.0 #i.e. no restriction
+#     RNN_ID ="RNN_MC2DLF1_norm1_2scalers_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+#     #load dataset
+#     BATCH_SIZE = 4 
+#     restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, restrict_dataset=True, restrict_dict = restrict_dict, normaliseSpectraUnity = True, separate_scalers = True)
+
+#     #run training
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
+
+#     #=================TRAINING 25 MC2 DLF=1, Quantile Regression, restriction max FCCD 0.1===================
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+#     MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+    
+#     NUM_EPOCHS = 20 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000 #10000
+
+#     maxFCCDdiff = 0.1
+#     maxDLFdiff = 1.0 #i.e. no restriction
+#     RNN_ID ="RNN_MC2DLF1_norm1_2scalers_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+#     #load dataset
+#     BATCH_SIZE = 4 
+#     restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, restrict_dataset=True, restrict_dict = restrict_dict, normaliseSpectraUnity = True, separate_scalers = True)
+
+#     #run training
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
+
+#     #=================TRAINING 26 MC2 DLF=1, Quantile Regression, restriction max FCCD 0.05===================
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+#     MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+    
+#     NUM_EPOCHS = 20 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000 #10000
+
+#     maxFCCDdiff = 0.05
+#     maxDLFdiff = 1.0 #i.e. no restriction
+#     RNN_ID ="RNN_MC2DLF1_norm1_2scalers_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+#     #load dataset
+#     BATCH_SIZE = 4 
+#     restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, restrict_dataset=True, restrict_dict = restrict_dict, normaliseSpectraUnity = True, separate_scalers = True)
+
+#     #run training
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
+
+#     #=================TRAINING 27 MC2 DLF=1, Quantile Regression, restriction max FCCD 0.01===================
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+#     MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+    
+#     NUM_EPOCHS = 20 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000 #10000
+
+#     maxFCCDdiff = 0.01
+#     maxDLFdiff = 1.0 #i.e. no restriction
+#     RNN_ID ="RNN_MC2DLF1_norm1_2scalers_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+#     #load dataset
+#     BATCH_SIZE = 4 
+#     restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, restrict_dataset=True, restrict_dict = restrict_dict, normaliseSpectraUnity = True, separate_scalers = True)
+
+#     #run training
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
+
+
+#     # all separate scalers
+# #     #=================TRAINING 28 MC2 DLF=1, Quantile Regression, no restriction, ===================    
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+#     MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+    
+#     NUM_EPOCHS = 20 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000 #10000
+#     RNN_ID = "RNN_MC2DLF1_2scalers_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_fulldataset_"+str(dataset_size)+"trials"
+
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+#     #load dataset
+#     BATCH_SIZE = 4 
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, separate_scalers=True)
+
+#     #run training
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
+
+#     #=================TRAINING 29 MC2 DLF=1, Quantile Regression, restriction max FCCD 0.5===================
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+#     MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+    
+#     NUM_EPOCHS = 20 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000 #10000
+
+#     maxFCCDdiff = 0.5
+#     maxDLFdiff = 1.0 #i.e. no restriction
+#     RNN_ID ="RNN_MC2DLF1_2scalers_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+#     #load dataset
+#     BATCH_SIZE = 4 
+#     restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, restrict_dataset=True, restrict_dict = restrict_dict, separate_scalers = True)
+
+#     #run training
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
+#     #=================TRAINING 30 MC2 DLF=1, Quantile Regression, restriction max FCCD 0.25===================
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+#     MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+    
+#     NUM_EPOCHS = 20 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000 #10000
+
+#     maxFCCDdiff = 0.25
+#     maxDLFdiff = 1.0 #i.e. no restriction
+#     RNN_ID ="RNN_MC2DLF1_2scalers_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+#     #load dataset
+#     BATCH_SIZE = 4 
+#     restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, restrict_dataset=True, restrict_dict = restrict_dict, separate_scalers = True)
+
+#     #run training
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
+#     #=================TRAINING 31 MC2 DLF=1, Quantile Regression, restriction max FCCD 0.1===================
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+#     MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+    
+#     NUM_EPOCHS = 20 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000 #10000
+
+#     maxFCCDdiff = 0.1
+#     maxDLFdiff = 1.0 #i.e. no restriction
+#     RNN_ID ="RNN_MC2DLF1_2scalers_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+#     #load dataset
+#     BATCH_SIZE = 4 
+#     restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, restrict_dataset=True, restrict_dict = restrict_dict, separate_scalers = True)
+
+#     #run training
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)
+#     #=================TRAINING 32 MC2 DLF=1, Quantile Regression, restriction max FCCD 0.05===================
+#     MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+#     MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+    
+#     NUM_EPOCHS = 20 #can try increasing
+#     LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+#     dataset_size = 10000 #10000
+
+#     maxFCCDdiff = 0.05
+#     maxDLFdiff = 1.0 #i.e. no restriction
+#     RNN_ID ="RNN_MC2DLF1_2scalers_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+
+#     #initialise directories to save
+#     if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+#         os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+#     #load dataset
+#     BATCH_SIZE = 4 
+#     restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
+#     train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, restrict_dataset=True, restrict_dict = restrict_dict, separate_scalers = True)
+
+#     #run training
+#     FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)    
+    #=================TRAINING 33 MC2 DLF=1, Quantile Regression, restriction max FCCD 0.01===================
+    MC_PATH = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_randomDLFs/"
+    MC_PATH_FCCDonly = CodePath+"/data/V05268A_data/training_data_V05268A_5000randomFCCDs_DLF1/"
+    
+    NUM_EPOCHS = 20 #can try increasing
+    LEARNING_RATE = 0.005 #0.01 #try modifying learning rate #0.001 too low for 30 epochs, 0.01 may be too high
+    dataset_size = 10000 #10000
+
+    maxFCCDdiff = 0.01
+    maxDLFdiff = 1.0 #i.e. no restriction
+    RNN_ID ="RNN_MC2DLF1_2scalers_"+str(NUM_EPOCHS)+"epochs_LR"+str(LEARNING_RATE)+"_maxFCCDdiff"+str(maxFCCDdiff)+"mm_"+str(dataset_size)+"trials"
+
+    #initialise directories to save
+    if not os.path.exists(CodePath+"/saved_models/"+RNN_ID+"/plots/"):
+        os.makedirs(CodePath+"/saved_models/"+RNN_ID+"/plots/")
+    
+    #load dataset
+    BATCH_SIZE = 4 
+    restrict_dict = {"maxFCCDdiff": maxFCCDdiff, "maxDLFdiff": maxDLFdiff}
+    train_loader, test_loader, dataset = load_data(BATCH_SIZE, size=dataset_size, path_MC2 = MC_PATH_FCCDonly, restrict_dataset=True, restrict_dict = restrict_dict, separate_scalers = True)
+
+    #run training
+    FCCD_accuracy_values, DLF_accuracy_values, loss_values = train_RNN(dataset, train_loader, test_loader, NUM_EPOCHS, LEARNING_RATE, saveRNN=True, plot_training_results = True, RNN_ID = RNN_ID, quantileRegressionDLF=True)    
+    
+    
+    
+    
+    
 if __name__ == "__main__":
     main()

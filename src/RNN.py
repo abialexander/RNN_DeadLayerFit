@@ -37,10 +37,6 @@ from torch.cuda.amp import autocast
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-
-#try increasing no of linear layers, from 2 to >2
-#try increasing dropout rate
-
 class FCNet(nn.Module):
     "fully connected part of Neural Network"
     def __init__(self, first_unit, last_unit):
@@ -50,11 +46,11 @@ class FCNet(nn.Module):
         fc1, fc2 = (first_unit, int(first_unit*0.25))
         do = 0.2
         self.fcnet = nn.Sequential(
-            torch.nn.Linear(fc1, fc2),
+            torch.nn.Linear(fc1, fc2), 
             torch.nn.BatchNorm1d(fc2),
             torch.nn.LeakyReLU(),
-            torch.nn.Dropout(do),
-#             torch.nn.Linear(fc2, fc3),
+            torch.nn.Dropout(do), #could try increasing dropout rate
+#             torch.nn.Linear(fc2, fc3), #could try increasing no of linear layers, from 2 to >2
 #             torch.nn.LeakyReLU(),
 #             torch.nn.Dropout(do),
 #             torch.nn.Linear(fc3, fc4),
@@ -63,22 +59,7 @@ class FCNet(nn.Module):
             torch.nn.Linear(fc2, last_unit),
         )
     def forward(self, x):
-        return self.fcnet(x)
-    
-class QuantileLoss(nn.Module):
-    """Quantile regression loss function.
-    https://www.evergreeninnovations.co/blog-quantile-loss-function-for-machine-learning/"""
-    def __init__(self, q):
-        super(QuantileLoss, self).__init__()
-        
-        self.q = q #quantile [0,1]
-               
-    def forward(self, yi, yip):
-        #p=prediction, yi=truth value, q=quantile
-        #For a set of values (i.e. a batch) the loss is the average
-        Loss = torch.mean(torch.max(self.q*(yi-yip), (self.q-1)*(yi-yip)))
-        return Loss
-    
+        return self.fcnet(x)    
 
 
 class RNN(nn.Module):
@@ -97,7 +78,7 @@ class RNN(nn.Module):
             feed_in_dim *= 2
         else:
             self.RNNLayer = torch.nn.GRU(input_size = self.seg, hidden_size = feed_in_dim//2,num_layers=2, batch_first=True,bidirectional=False,dropout=0.2)
-        self.fcnet = FCNet(feed_in_dim,self.num_class) #only 2 classes/decisions to make: FCCD1>FCCD2 and DLF1>DLF2
+        self.fcnet = FCNet(feed_in_dim,self.num_class)
         self.attention_weight = nn.Linear(feed_in_dim//2, feed_in_dim//2, bias=False)
         self.get_attention = get_attention
         self.attention_mechanism = attention_mechanism #="normal" or " cosine"
@@ -136,3 +117,17 @@ class RNN(nn.Module):
         x = torch.sigmoid(x) #forces NNoutput to be 0-1, means we can use BCE loss function and not BCEwithlogitloss
         # assert 0
         return x
+    
+class QuantileLoss(nn.Module):
+    """Quantile regression loss function.
+    https://www.evergreeninnovations.co/blog-quantile-loss-function-for-machine-learning/"""
+    def __init__(self, q):
+        super(QuantileLoss, self).__init__()
+        
+        self.q = q #quantile [0,1]
+               
+    def forward(self, yi, yip):
+        #p=prediction, yi=truth value, q=quantile
+        #For a set of values (i.e. a batch) the loss is the average
+        Loss = torch.mean(torch.max(self.q*(yi-yip), (self.q-1)*(yi-yip)))
+        return Loss
