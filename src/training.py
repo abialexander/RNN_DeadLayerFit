@@ -863,7 +863,7 @@ def plotMisclassifiedTrials(RNN_ID, CodePath, totalTrials,
     
      
 
-def plot_attention(spectrum, attscore, labels, ax= None, fig=None):
+def plot_attention(spectrum, attscore, labels, ax= None, fig=None, maxE=450):
     '''
     This function plots the attention score distribution on given spectrum
     '''
@@ -877,7 +877,8 @@ def plot_attention(spectrum, attscore, labels, ax= None, fig=None):
     plt.subplot(gs[0])
     rescale = lambda y: (y - np.min(y)) / (np.max(y) - np.min(y))
     len_spectrum = len(spectrum)
-    plt.bar(np.linspace(5,450+0.5,len_spectrum), spectrum, width=1.5, color=colormap_normal(rescale(attscore)))
+    
+    plt.bar(np.linspace(5,maxE+0.5,len_spectrum), spectrum, width=1.5, color=colormap_normal(rescale(attscore)))
     plt.xlabel("Energy / keV")
     plt.ylabel("Counts")
     plt.yscale("log")
@@ -903,7 +904,7 @@ def plot_attention(spectrum, attscore, labels, ax= None, fig=None):
 
 def plot_multiple_attention(dataset, test_loader, RNN_path, attention_mechanism="normal", RNN_ID=None, 
                             save_plots = False, train_restricted_test_fulldataset = False, FCCDonly = False, 
-                            quantileRegressionDLF = False):
+                            quantileRegressionDLF = False, maxE=450):
     "Function to plot the attention score of 20 random test events and save to a pdf"
     
     if RNN_ID is None and save_plots==True:
@@ -945,13 +946,13 @@ def plot_multiple_attention(dataset, test_loader, RNN_path, attention_mechanism=
             labels = {"FCCD1": test_extras["FCCD1"][i].item(), "FCCD2": test_extras["FCCD2"][i].item(), "DLF1": test_extras["DLF1"][i].item(), "DLF2": test_extras["DLF2"][i].item()}
 
             #plot attention score on spectrum
-            fig, ax = plot_attention(test_spectrum[i], attention, labels)
+            fig, ax = plot_attention(test_spectrum[i], attention, labels, maxE=maxE)
             fig.savefig(pdf, format='pdf') 
 
     pdf.close()
     
 def plot_average_attention(dataset, test_loader, RNN_path, attention_mechanism="normal", RNN_ID=None, save_plots = False, 
-                           train_restricted_test_fulldataset = False, FCCDonly = False, quantileRegressionDLF=False):
+                           train_restricted_test_fulldataset = False, FCCDonly = False, quantileRegressionDLF=False, maxE=450):
     "Function to plot the average attention score of all events in test loader with a random example spectra below to compare"
     
     if RNN_ID is None and save_plots==True:
@@ -994,7 +995,7 @@ def plot_average_attention(dataset, test_loader, RNN_path, attention_mechanism="
     fig, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(8,6))
     binwidth = 0.5 #keV
 #     bins = np.arange(0,450+binwidth,binwidth)
-    bins = np.arange(5,450+binwidth,binwidth)
+    bins = np.arange(5,maxE+binwidth,binwidth)
     bins_centres = np.delete(bins+binwidth/2,-1)
     
     ax1.plot(bins_centres, average_attention)
@@ -1002,11 +1003,11 @@ def plot_average_attention(dataset, test_loader, RNN_path, attention_mechanism="
     
     ax1.set_ylabel("Average Attention")
     ax1.set_yscale("log")
-    ax1.set_xlim(0,450)
+    ax1.set_xlim(0,maxE)
     ax2.set_ylabel("Example Spectra")
     ax2.set_yscale("log")
     ax2.set_xlabel("Energy / keV")
-    ax2.set_xlim(0,450)
+    ax2.set_xlim(0,maxE)
     plt.tight_layout()
     plt.subplots_adjust(wspace=0, hspace=0)
     
@@ -1017,18 +1018,19 @@ def plot_average_attention(dataset, test_loader, RNN_path, attention_mechanism="
     
     
     #save average attention hist
-    if train_restricted_test_fulldataset == False:
-        df = pd.DataFrame({"bin_centres":bins_centres, "average_attention":average_attention})
-        df.to_csv(CodePath+"/saved_models/"+RNN_ID+"/average_attention_hist.csv")
-        print("saved average attention to csv file")
-        
+    df = pd.DataFrame({"bin_centres":bins_centres, "average_attention":average_attention})
+    fn = CodePath+"/saved_models/"+RNN_ID+"/average_attention_hist"
+    if train_restricted_test_fulldataset == True:
+        fn = fn+"_fulldataset"
+    df.to_csv(fn+".csv")
+    print("saved average attention to csv file")
         
     
     return average_attention
     
 
 def test_RNN_spectrumdiff(RNN_ID, spectrum_diff, spectrum1, spectrum2, labels, dataset_histlen=890, save_results = False,
-                         plot_results=True):
+                         plot_results=True, maxE=450):
     """
     Feed a single spectrumdiff to an RNN, return RNN outputs and plot attention.
     Currently only for quantileRegressionDLF.
@@ -1078,7 +1080,7 @@ def test_RNN_spectrumdiff(RNN_ID, spectrum_diff, spectrum1, spectrum2, labels, d
         #Plot 2
         fig1, (ax1, ax2) = plt.subplots(nrows=2, sharex=True, figsize=(8,6))
         binwidth = 0.5 #keV
-        bins = np.arange(5,450+binwidth,binwidth)
+        bins = np.arange(5,maxE+binwidth,binwidth)
         bins_centres = np.delete(bins+binwidth/2,-1)
         ax1.plot(bins_centres, attention, label="attention")
         ax2.plot(bins_centres, spectrum1, label=labels["spectrum1"]+"- FCCD: "+labels["FCCD1"]+", DLF: "+labels["DLF1"])
@@ -1086,11 +1088,11 @@ def test_RNN_spectrumdiff(RNN_ID, spectrum_diff, spectrum1, spectrum2, labels, d
 
         ax1.set_ylabel("Attention")
         ax1.set_yscale("log")
-        ax1.set_xlim(0,450)
+        ax1.set_xlim(0,maxE)
         ax2.set_ylabel("Counts / "+str(binwidth)+" keV")
         ax2.set_yscale("log")
         ax2.set_xlabel("Energy / keV")
-        ax2.set_xlim(0,450)
+        ax2.set_xlim(0,maxE)
         ax2.legend()
         plt.tight_layout()
         plt.subplots_adjust(wspace=0, hspace=0)

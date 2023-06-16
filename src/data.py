@@ -72,11 +72,19 @@ class DL_Dataset(Dataset):
     CodePath = os.path.dirname(os.path.abspath("__file__"))
 
     def __init__(self, path, restrict_dataset = False, restrict_dict = None, size=1000, path_MC2 = None,
-                normaliseSpectraUnity = False, ratioSpectraRNNInput = False, separate_scalers=False):
+                normaliseSpectraUnity = False, ratioSpectraRNNInput = False, separate_scalers=False, maxE=450):
         
         self.size = size #this is the no. pairs of MC spectra to sample 
-        self.hist_length = 890 #old value=900 # of bins #binning: 0.5 keV bins from 5-450 keV:
-        self.energy_bin = np.linspace(5,450.0,self.hist_length+1) # Only look at events between 5 and 450 keV
+        
+        self.bin_width = 0.5
+        self.maxE = maxE
+        if self.maxE == 450:
+            self.hist_length = 890 #old value=900 # of bins #binning: 0.5 keV bins from 5-450 keV:
+            self.energy_bin = np.linspace(5,450.0,self.hist_length+1) # Only look at events between 5 and 450 keV
+        else:
+            self.hist_length = int(890-(450-self.maxE)//self.bin_width)
+            self.energy_bin = np.linspace(5,self.maxE,self.hist_length+1)
+        
         self.restrict_dataset = restrict_dataset
         self.restrict_dict = restrict_dict
         
@@ -166,8 +174,13 @@ class DL_Dataset(Dataset):
         
         df =  pd.read_hdf(h5_address, key="energy_hist")
         counts = df[0].to_numpy()
+
         counts = counts[10:] #remove first 10 bins (5 keV) due to trigger
-        bins = self.energy_bin #size 891, 5-450keV, 0.5keV width
+        
+        if self.maxE != 450:
+            counts = counts[:-int(((450-self.maxE)//self.bin_width))] #remove bins at end if maxE<450
+        
+#         bins = self.energy_bin #size 891, 5-450keV, 0.5keV width
          
         if self.normaliseSpectraUnity == True:
             counts = normalise_counts_to_unity(counts, unity=10**3)
@@ -275,7 +288,7 @@ def normalise_MC_counts(counts):
 
 #Load dataset
 def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1000, path = None, path_MC2 = None,
-              normaliseSpectraUnity = False, ratioSpectraRNNInput = False, separate_scalers=False):
+              normaliseSpectraUnity = False, ratioSpectraRNNInput = False, separate_scalers=False, maxE=450):
     
     "function to load the dataset"
     
@@ -289,7 +302,7 @@ def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1
         path = MC_PATH
     
     dataset = DL_Dataset(path, restrict_dataset = restrict_dataset, restrict_dict=restrict_dict, size=size, 
-                         path_MC2 = path_MC2,normaliseSpectraUnity=normaliseSpectraUnity, ratioSpectraRNNInput=ratioSpectraRNNInput, separate_scalers=separate_scalers)
+                         path_MC2 = path_MC2,normaliseSpectraUnity=normaliseSpectraUnity, ratioSpectraRNNInput=ratioSpectraRNNInput, separate_scalers=separate_scalers, maxE=maxE)
     
     validation_split = .3 #Split data set into training & testing with 7:3 ratio
     shuffle_dataset = True
@@ -315,13 +328,17 @@ def load_data(batch_size, restrict_dataset = False, restrict_dict = None, size=1
         
 
     
-def load_two_spectra(address1, address2, dataset, MC1=False, MC2=True, separate_scalers=False, norm1=False):
+def load_two_spectra(address1, address2, dataset, MC1=False, MC2=True, separate_scalers=False, norm1=False, maxE=450):
     "function to load 2 spectra and return spectrum_diff without running entire dataset"
+    
+    bin_width = 0.5
     
     #get normalised specrta counts
     df1 =  pd.read_hdf(address1, key="energy_hist")
     counts1 = df1[0].to_numpy()
     counts1 = counts1[10:] #remove first 10 bins (5 keV) due to trigger
+    if maxE != 450:
+        counts1 = counts1[:-int(((450-maxE)//bin_width))] #remove bins at end if maxE<450
     if MC1==True and norm1==False:
         counts1 = normalise_MC_counts(counts1)
     elif norm1 == True:
@@ -330,6 +347,8 @@ def load_two_spectra(address1, address2, dataset, MC1=False, MC2=True, separate_
     df2 =  pd.read_hdf(address2, key="energy_hist")
     counts2 = df2[0].to_numpy()
     counts2 = counts2[10:]
+    if maxE != 450:
+        counts2 = counts2[:-int(((450-maxE)//bin_width))] #remove bins at end if maxE<450
     if MC2==True and norm1==False:
         counts2 = normalise_MC_counts(counts2)
     elif norm1 == True:
