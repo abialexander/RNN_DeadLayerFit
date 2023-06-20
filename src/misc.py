@@ -214,7 +214,7 @@ def compare_attention(maxFCCDdiff_list, NUM_EPOCHS_list, test_loader, RNN_ID_sta
 #     plt.suptitle(RNN_ID)
 
     if savePlots == True:
-        plt.savefig(CodePath+"/Results/"+RNN_ID_start+"_AttentionComparison.pdf")    
+        plt.savefig(CodePath+"/Results/"+RNN_ID_start+"_AttentionComparison.png")    
     
     
 
