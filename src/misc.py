@@ -109,6 +109,7 @@ def find_hist_quantile(counts, bins, q):
     print(bin_quantile)
     return bin_quantile
 
+# find 90% quantile -> try different confidence level (i.e. 60, 80%, 68%=1sigma)
 def plot_FCCD_pdf(RNN_ID, q=0.9):
     "plot the pdf of RNN FCCD output on test training data, with quantiles"
     
@@ -128,47 +129,19 @@ def plot_FCCD_pdf(RNN_ID, q=0.9):
     fig, ax = plt.subplots()
     plt.step(bins_centres, counts0/sum(counts0), linestyle='-',linewidth=1, label = "FCCD truth label = 0", color="blue")
     plt.step(bins_centres, counts1/sum(counts1), linestyle='-',linewidth=1, label = "FCCD truth label = 1", color="orange")
-    plt.vlines(pdf1_q_low, min(counts1), 1/2, ls="-.", color="orange")
-    plt.vlines(pdf0_q_up, min(counts1), 1/2, ls="-.", color="blue")
-    # plt.Rectangle( [pdf0_q90,min(counts1)], pdf1_q10-pdf0_q90, 1/2, color="grey") #, angle=0.0 ÷, rotation_point='xy')
-    plt.legend(loc="upper left", title="RNN output region of uncertainty: "+ str(pdf0_q_up)+" - "+str(pdf1_q_low), title_fontsize=9, fontsize=9)
+    plt.vlines(pdf1_q_low, min(counts1), 1, ls="-.", color="orange")
+    plt.vlines(pdf0_q_up, min(counts1), 1, ls="-.", color="blue")
+    rect = matplotlib.patches.Rectangle( [pdf0_q_up,min(counts0/(sum(counts0)))], pdf1_q_low-pdf0_q_up, 1, color="grey", alpha=0.1)
+    ax.add_patch(rect)
+    plt.legend(loc="upper left", title="RNN output agreement region: "+ str(pdf0_q_up)+" - "+str(pdf1_q_low), title_fontsize=8.5, fontsize=8.5)
     plt.xlabel("RNN Output FCCD")
     plt.ylabel("PDF")
-    plt.ylim(0.5*10**(-3), 2)
+    plt.ylim(0.5*10**(-3), 1)
     plt.yscale("log")
     plt.savefig(CodePath+"/saved_models/"+RNN_ID+"/plots/FCCD_test_classification_pdf.png")
     
-    return pdf1_q_low, pdf0_q_up    
-    
+    return pdf1_q_low, pdf0_q_up 
 
-# def plot_FCCD_pdf(RNN_ID):
-#     "plot the pdf of RNN FCCD output on test training data, with quantiles"
-    
-#     #open hist
-#     CodePath = os.path.dirname(os.path.abspath("__file__"))
-#     df = pd.read_csv(CodePath+"/saved_models/"+RNN_ID+"/FCCD_test_classification_hist.csv")
-#     bins_centres, counts0, counts1 = df.bins_centres, df.counts0, df.counts1
-#     bins = np.linspace(0,1,201) 
-    
-#     #compute 10% and 90% quantiles for exclusion region
-#     pdf1_q10 = find_hist_quantile(counts1, bins, 0.1)
-#     pdf0_q90 = find_hist_quantile(counts0, bins, 0.9)
-    
-#     #plot
-#     fig, ax = plt.figure()
-#     plt.step(bins_centres, counts0/sum(counts0), linestyle='-',linewidth=1, label = "FCCD truth label = 0", color="blue")
-#     plt.step(bins_centres, counts1/sum(counts1), linestyle='-',linewidth=1, label = "FCCD truth label = 1", color="orange")
-#     plt.vlines(pdf1_q10, min(counts1), 1/2, ls="-.", color="orange")
-#     plt.vlines(pdf0_q90, min(counts1), 1/2, ls="-.", color="blue")
-#     # plt.Rectangle( [pdf0_q90,min(counts1)], pdf1_q10-pdf0_q90, 1/2, color="grey") #, angle=0.0 ÷, rotation_point='xy')
-#     plt.legend(loc="upper left", title="RNN output region of uncertainty: "+ str(pdf0_q90)+" - "+str(pdf1_q10), title_fontsize=9, fontsize=9)
-#     plt.xlabel("RNN Output FCCD")
-#     plt.ylabel("PDF")
-#     plt.ylim(0.5*10**(-3), 2)
-#     plt.yscale("log")
-#     plt.savefig(CodePath+"/saved_models/"+RNN_ID+"/plots/FCCD_test_classification_pdf.png")
-
-    
 def compare_attention(maxFCCDdiff_list, NUM_EPOCHS_list, test_loader, RNN_ID_start="RNN_MC2DLF1", 
                       LEARNING_RATE = 0.005, dataset_size = 10000, savePlots= False, maxE=450):
     
@@ -189,19 +162,25 @@ def compare_attention(maxFCCDdiff_list, NUM_EPOCHS_list, test_loader, RNN_ID_sta
         average_attention = df.average_attention
         average_attention_list.append(average_attention)
 
-        axs[ind].plot(bins_centres, average_attention, label = "maxFCCDdiff: "+str(maxFCCDdiff)+" mm")
+        axs[ind].plot(bins_centres, average_attention, label = r"Max($\Delta$FCCD): "+str(maxFCCDdiff)+" mm")
         axs[ind].set_ylabel("Attention")
         axs[ind].set_yscale("log")
         axs[ind].set_xlim(0,maxE)
-        axs[ind].legend(loc="lower right", fontsize=8)
+        axs[ind].legend(loc="lower right", fontsize=9)
         axs[ind].grid()
         axs[ind].minorticks_on()
+        
+        for peak in [81, 276.4, 302.85, 356.01, 383.85]:
+            rect = matplotlib.patches.Rectangle((peak-5, 0.1*min(average_attention)),
+                                     10, 10*max(average_attention),
+                                     color ='grey', alpha=0.25)
+            axs[ind].add_patch(rect)
         
     #get random spectra to plot:
     test_spectrum_diff, test_FCCDLabel, test_DLFLabel, test_extras, test_spectrum = next(iter(test_loader))
     test_spectrum = test_spectrum[1].numpy()
     axs[-1].plot(bins_centres, test_spectrum, color="red", label="Example Spectrum")
-    axs[-1].legend(loc="lower right", fontsize=8)
+    axs[-1].legend(loc="lower right", fontsize=9)
     axs[-1].set_xlim(0,maxE)
     axs[-1].set_ylabel("Spectrum")
     axs[-1].set_yscale("log")
@@ -209,19 +188,16 @@ def compare_attention(maxFCCDdiff_list, NUM_EPOCHS_list, test_loader, RNN_ID_sta
     axs[-1].set_xlim(0,maxE)
     axs[-1].grid()
     axs[-1].minorticks_on()
-    # plt.tight_layout()
+    
+    for peak in [81, 276.4, 302.85, 356.01,383.85]:
+        rect = matplotlib.patches.Rectangle((peak-5, 0.1*min(test_spectrum)),
+                                 10, 10*max(test_spectrum),
+                                 color ='grey', alpha=0.25)
+        axs[-1].add_patch(rect)
+    
     plt.subplots_adjust(wspace=0, hspace=0)
 #     plt.suptitle(RNN_ID)
 
     if savePlots == True:
         plt.savefig(CodePath+"/Results/"+RNN_ID_start+"_AttentionComparison.png")    
-    
-    
-
-    
-    
-    
-    
-    
-    
     
