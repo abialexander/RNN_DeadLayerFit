@@ -1,4 +1,4 @@
-name: /unix/legend/abi/ML_DL/MLenv
+name: MLenv
 channels:
   - pytorch
   - conda-forge
@@ -220,4 +220,4 @@ dependencies:
   - zeromq=4.3.4=h2531618_0
   - zlib=1.2.13=h5eee18b_0
   - zstd=1.5.2=ha4553b6_0
-prefix: /unix/legend/abi/ML_DL/MLenv
+prefix: MLenv
